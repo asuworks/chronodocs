@@ -1,0 +1,59 @@
+# ChronoDocs Configuration
+
+# Phase directory template; {phase} is interpolated at runtime
+phase_dir_template: ".devcontext/progress/{phase}"
+
+# Directories/files to watch (root watcher)
+watch_paths:
+- "src/"
+- "docs/"
+- ".devcontext/progress/"
+- "scripts/"
+
+# Patterns to ignore (any watcher)
+ignore_patterns:
+- ".git/"
+- "node_modules/"
+- ".venv/"
+- "__pycache__/"
+- ".creation_index.json"
+- ".update_index.json"
+- "change_log.md"
+- "*.tmp"
+- ".DS_Store"
+
+# Debounce windows (milliseconds)
+debounce:
+phase: 2000 # phase watcher debounce
+root: 3000 # root watcher debounce
+
+# Command to run on root changes
+make_command: "make change_log"
+
+# Default report grouping
+report:
+group_by: "updated_day" # updated_day | created_day | folder | status
+sort_by: "updated_desc" # updated_asc | updated_desc | created_asc | created_desc
+extensions:
+- ".md"
+- ".py"
+- ".txt"
+
+# Logging
+logging:
+level: "INFO" # DEBUG | INFO | ERROR
+format: "text" # text | json
+
+# Index keying strategy (optional)
+# index_strategy: "inode" # inode | name | hybrid (default)
+
+# Conflict handling during reconciliation
+conflict_handling: "warn_overwrite" # warn_overwrite | fail | suffix
+
+# Auto-add to .gitignore (optional)
+auto_gitignore: true
+
+# Timestamp sources (priority order)
+timestamp_sources:
+- "git" # git log
+- "filesystem" # file mtime / birthtime

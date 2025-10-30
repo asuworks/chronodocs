@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "chronodocs"
+version = "0.1.0"
+description = "A temporal custodian for documentation systems."
+authors = ["Jules"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pyyaml = "^6.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
