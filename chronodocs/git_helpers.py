@@ -15,99 +15,117 @@ def _run_git_command(command: list[str], cwd: Path) -> str:
         )
         return result.stdout
     except (subprocess.CalledProcessError, FileNotFoundError):
-        # Handle cases where git is not installed or the command fails
         return ""
 
 
-def get_git_status(repo_path: Path) -> Dict[str, str]:
+class GitInfoProvider:
     """
-    Gets the git status for all files in the repository.
-    Uses `git status --porcelain -z` for reliable parsing.
-
-    Returns a dictionary mapping file paths (relative to repo root) to a status string.
-    Status strings can be: 'new', 'modified', 'staged', 'untracked', 'deleted'.
+    A class to efficiently fetch and cache Git information for a repository.
     """
-    output = _run_git_command(["status", "--porcelain", "-z"], cwd=repo_path)
-    if not output:
-        return {}
 
-    statuses = {}
-    # Entries are NUL-terminated
-    for line in output.strip("\0").split("\0"):
-        if not line:
-            continue
+    def __init__(self, repo_path: Path):
+        self.repo_path = repo_path
+        self._statuses: Dict[str, str] = self._fetch_all_statuses()
+        self._creation_times: Dict[str, float] = self._fetch_all_creation_times()
+        self._modification_times: Dict[str, float] = self._fetch_all_modification_times()
 
-        status_codes = line[:2]
-        filepath = line[3:]
+    def _fetch_all_statuses(self) -> Dict[str, str]:
+        """Gets the git status for all files in the repository."""
+        output = _run_git_command(["status", "--porcelain", "-z"], cwd=self.repo_path)
+        if not output:
+            return {}
 
-        # Handle renamed files (e.g., "R  old -> new")
-        if " -> " in filepath:
-            filepath = filepath.split(" -> ")[1]
+        statuses = {}
+        for line in output.strip("\0").split("\0"):
+            if not line:
+                continue
 
-        # Determine a single status string based on the porcelain codes
-        index_status = status_codes[0]
-        worktree_status = status_codes[1]
+            status_codes = line[:2]
+            filepath = line[3:]
 
-        status = "committed"  # Default
-        if index_status == "A" or worktree_status == "?":
-            status = "new"
-        elif worktree_status == "M":
-            status = "modified"
-        elif index_status == "M":
-            status = "staged"
-        elif index_status == "D":
-            status = "deleted"
-        elif index_status == "R":  # Renamed in index
-            status = "staged"  # Treat as staged change
+            if " -> " in filepath:
+                filepath = filepath.split(" -> ")[1]
 
-        statuses[filepath] = status
+            index_status, worktree_status = status_codes[0], status_codes[1]
+            status = "committed"
+            if index_status == "A" or worktree_status == "?":
+                status = "new"
+            elif worktree_status == "M":
+                status = "modified"
+            elif index_status == "M":
+                status = "staged"
+            elif index_status == "D":
+                status = "deleted"
+            elif index_status == "R":
+                status = "staged"
+            statuses[filepath] = status
+        return statuses
 
-    return statuses
+    def _parse_git_log_output(self, output: str) -> Dict[str, float]:
+        times = {}
+        commits = output.strip().split("---")[1:]  # Split by --- and remove first empty string
+        for commit in commits:
+            lines = commit.strip().split("\n")
+            if not lines:
+                continue
 
+            timestamp_str = lines[0]
+            if not timestamp_str.isdigit():
+                continue
 
-def get_file_creation_time(filepath: Path, repo_path: Path) -> Optional[float]:
-    """
-    Gets the creation time of a file from its first git commit.
-    Returns a Unix timestamp.
-    """
-    output = _run_git_command(
-        ["log", "--diff-filter=A", "--follow", "--format=%at", "--", str(filepath)],
-        cwd=repo_path,
-    )
-    if output:
-        return float(output.strip().split("\n")[0])
-    return None
+            timestamp = float(timestamp_str)
+            files = lines[1:]
+            for file in files:
+                if file and file not in times:
+                    times[file] = timestamp
+        return times
 
+    def _fetch_all_creation_times(self) -> Dict[str, float]:
+        """Gets the creation time for all files from their first git commit."""
+        output = _run_git_command(
+            ["log", "--reverse", "--diff-filter=A", "--pretty=format:---\n%at", "--name-only"],
+            cwd=self.repo_path,
+        )
+        return self._parse_git_log_output(output)
 
-def get_file_last_modified_time(filepath: Path, repo_path: Path) -> Optional[float]:
-    """
-    Gets the last modification time of a file.
-    For modified/untracked files, uses filesystem timestamp.
-    For committed files, uses the most recent git commit timestamp.
-    Returns a Unix timestamp.
-    """
-    # First check if file is modified or untracked
-    git_statuses = get_git_status(repo_path)
-    try:
-        relative_path = str(filepath.relative_to(repo_path))
-        status = git_statuses.get(relative_path, "committed")
+    def _fetch_all_modification_times(self) -> Dict[str, float]:
+        """Gets the last modification time for all committed files."""
+        output = _run_git_command(
+            ["log", "--pretty=format:---\n%at", "--name-only"], cwd=self.repo_path
+        )
+        return self._parse_git_log_output(output)
 
-        # If file is modified or new, use filesystem timestamp
-        if status in ("modified", "new", "untracked"):
-            import os
+    def get_status(self, filepath: Path) -> str:
+        """Returns the cached git status for a file."""
+        try:
+            relative_path = str(filepath.relative_to(self.repo_path))
+            return self._statuses.get(relative_path, "committed")
+        except ValueError:
+            return "committed"
 
-            try:
-                return os.path.getmtime(filepath)
-            except OSError:
-                pass
-    except ValueError:
-        # filepath is not relative to repo_path
-        pass
+    def get_creation_time(self, filepath: Path) -> Optional[float]:
+        """Returns the cached creation time for a file."""
+        try:
+            relative_path = str(filepath.relative_to(self.repo_path))
+            return self._creation_times.get(relative_path)
+        except ValueError:
+            return None
 
-    # Otherwise, use git commit timestamp
-    output = _run_git_command(
-        ["log", "-1", "--format=%at", "--", str(filepath)], cwd=repo_path
-    )
-    if output:
-        return float(output.strip())
-    return None
+    def get_last_modified_time(self, filepath: Path) -> Optional[float]:
+        """
+        Gets the last modification time, preferring filesystem for new/modified files.
+        """
+        try:
+            relative_path = str(filepath.relative_to(self.repo_path))
+            status = self._statuses.get(relative_path)
+
+            if status in ("modified", "new"):
+                import os
+                try:
+                    return os.path.getmtime(filepath)
+                except OSError:
+                    pass  # Fallback to git time
+
+            return self._modification_times.get(relative_path)
+        except ValueError:
+            return None

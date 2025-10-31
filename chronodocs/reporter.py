@@ -7,11 +7,7 @@ from typing import Any, Dict, List, Tuple
 from urllib.parse import quote
 
 from .config import Config
-from .git_helpers import (
-    get_file_creation_time,
-    get_file_last_modified_time,
-    get_git_status,
-)
+from .git_helpers import GitInfoProvider
 
 
 class Reporter:
@@ -28,8 +24,6 @@ class Reporter:
             ".update_index.json",
             "change_log.md",
         }
-
-        self.git_statuses = get_git_status(self.repo_path)
 
         # Calculate phase directory for relative link generation
         self.phase_dir = None
@@ -100,33 +94,28 @@ class Reporter:
 
         return collected_files
 
-    def _get_file_info(self, filepath: Path) -> Dict[str, Any]:
+    def _get_file_info(
+        self, filepath: Path, git_info: GitInfoProvider
+    ) -> Dict[str, Any]:
         """Gathers all necessary information for a single file."""
         try:
             relative_path_str = str(filepath.relative_to(self.repo_path))
         except ValueError:
-            # If file is not relative to repo_path, use absolute path
             relative_path_str = str(filepath)
 
-        # 1. Get status
-        status = self.git_statuses.get(relative_path_str, "committed")
-
-        # 2. Get creation time
-        created_ts = get_file_creation_time(filepath, self.repo_path)
+        status = git_info.get_status(filepath)
+        created_ts = git_info.get_creation_time(filepath)
         if not created_ts:
             try:
                 created_ts = os.path.getctime(filepath)
             except OSError:
                 created_ts = os.path.getmtime(filepath)
-
-        # 3. Get update time
-        updated_ts = get_file_last_modified_time(filepath, self.repo_path)
+        updated_ts = git_info.get_last_modified_time(filepath)
         if not updated_ts:
             try:
                 updated_ts = os.path.getmtime(filepath)
             except OSError:
                 updated_ts = created_ts
-
         return {
             "path": filepath,
             "relative_path": relative_path_str,
@@ -138,17 +127,16 @@ class Reporter:
     def generate_report(self) -> str:
         """Generates the full Markdown report."""
         all_files = self._collect_files()
-
         if not all_files:
             return "# Change Log\n\nNo files found matching the watch paths and extensions."
 
+        git_info = GitInfoProvider(self.repo_path)
         all_files_info = []
         for filepath in all_files:
             try:
-                info = self._get_file_info(filepath)
+                info = self._get_file_info(filepath, git_info)
                 all_files_info.append(info)
             except Exception as e:
-                # Skip files that cause errors
                 print(f"Warning: Could not process {filepath}: {e}")
                 continue
 
