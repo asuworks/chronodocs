@@ -1,4 +1,5 @@
 import os
+import fnmatch
 from pathlib import Path
 from typing import List, Tuple
 
@@ -22,9 +23,13 @@ class Reconciler:
         self._ignore_patterns = set(config.ignore_patterns) | {".creation_index.json", ".update_index.json", "change_log.md"}
 
     def _is_ignored(self, filepath: Path) -> bool:
-        """Check if a file should be ignored based on the config."""
-        # This is a simple implementation. A more robust one would handle glob patterns.
-        return filepath.name in self._ignore_patterns or any(part in self._ignore_patterns for part in filepath.parts)
+        """
+        Check if a file should be ignored based on the config, supporting glob patterns.
+        """
+        for pattern in self._ignore_patterns:
+            if fnmatch.fnmatch(filepath.name, pattern):
+                return True
+        return False
 
     def reconcile(self, dry_run: bool = False):
         """
