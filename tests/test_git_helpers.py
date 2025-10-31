@@ -4,11 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from chronodocs.git_helpers import (
-    get_file_creation_time,
-    get_file_last_modified_time,
-    get_git_status,
-)
+from chronodocs.git_helpers import GitInfoProvider
 
 
 @pytest.fixture
@@ -32,8 +28,9 @@ def test_get_git_status_untracked(temp_git_repo: Path):
     """Test parsing of untracked files."""
     untracked_file = temp_git_repo / "untracked.md"
     untracked_file.write_text("untracked")
-    statuses = get_git_status(temp_git_repo)
-    assert statuses.get("untracked.md") == "new"
+    git_info = GitInfoProvider(temp_git_repo)
+    status = git_info.get_status(untracked_file)
+    assert status == "new"
 
 
 def test_get_git_status_staged(temp_git_repo: Path):
@@ -41,8 +38,9 @@ def test_get_git_status_staged(temp_git_repo: Path):
     staged_file = temp_git_repo / "staged.md"
     staged_file.write_text("staged")
     subprocess.run(["git", "add", staged_file], cwd=temp_git_repo, check=True)
-    statuses = get_git_status(temp_git_repo)
-    assert statuses.get("staged.md") == "new"
+    git_info = GitInfoProvider(temp_git_repo)
+    status = git_info.get_status(staged_file)
+    assert status == "new"
 
 
 def test_get_git_status_committed(temp_git_repo: Path):
@@ -53,8 +51,9 @@ def test_get_git_status_committed(temp_git_repo: Path):
     subprocess.run(
         ["git", "commit", "-m", "Initial commit"], cwd=temp_git_repo, check=True
     )
-    statuses = get_git_status(temp_git_repo)
-    assert "committed.md" not in statuses
+    git_info = GitInfoProvider(temp_git_repo)
+    status = git_info.get_status(committed_file)
+    assert status == "committed"
 
 
 def test_get_git_status_modified(temp_git_repo: Path):
@@ -68,8 +67,9 @@ def test_get_git_status_modified(temp_git_repo: Path):
 
     modified_file.write_text("modified content")
 
-    statuses = get_git_status(temp_git_repo)
-    assert statuses.get("modified.md") == "modified"
+    git_info = GitInfoProvider(temp_git_repo)
+    status = git_info.get_status(modified_file)
+    assert status == "modified"
 
 
 def test_get_file_timestamps(temp_git_repo: Path):
@@ -91,8 +91,9 @@ def test_get_file_timestamps(temp_git_repo: Path):
     second_commit_time = time.time()
     subprocess.run(["git", "commit", "-m", "second"], cwd=temp_git_repo, check=True)
 
-    creation_time = get_file_creation_time(file_path, temp_git_repo)
-    modified_time = get_file_last_modified_time(file_path, temp_git_repo)
+    git_info = GitInfoProvider(temp_git_repo)
+    creation_time = git_info.get_creation_time(file_path)
+    modified_time = git_info.get_last_modified_time(file_path)
 
     assert creation_time is not None
     assert modified_time is not None
@@ -118,8 +119,10 @@ def test_get_file_last_modified_time_uses_filesystem_for_modified_files(
     subprocess.run(["git", "add", file_path], cwd=temp_git_repo, check=True)
     subprocess.run(["git", "commit", "-m", "initial"], cwd=temp_git_repo, check=True)
 
+    git_info = GitInfoProvider(temp_git_repo)
+
     # Get the commit timestamp
-    commit_time = get_file_last_modified_time(file_path, temp_git_repo)
+    commit_time = git_info.get_last_modified_time(file_path)
     assert commit_time is not None
 
     # Wait to ensure filesystem timestamp will be different
@@ -128,8 +131,11 @@ def test_get_file_last_modified_time_uses_filesystem_for_modified_files(
     # Modify the file without committing
     file_path.write_text("modified version")
 
+    # Re-instantiate the provider to pick up the new file system state
+    git_info = GitInfoProvider(temp_git_repo)
+
     # Get the modified time - should now use filesystem timestamp
-    modified_time = get_file_last_modified_time(file_path, temp_git_repo)
+    modified_time = git_info.get_last_modified_time(file_path)
     assert modified_time is not None
 
     # The key test: modified_time should be different from commit_time
@@ -161,5 +167,4 @@ def test_get_file_last_modified_time_uses_filesystem_for_modified_files(
     ), f"Modified time {modified_time} should not be significantly in the future"
 
     # Verify the file is actually marked as modified
-    statuses = get_git_status(temp_git_repo)
-    assert statuses.get("test.md") == "modified"
+    assert git_info.get_status(file_path) == "modified"
