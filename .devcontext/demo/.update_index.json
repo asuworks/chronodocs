@@ -1,0 +1,506 @@
+{
+  ".devcontext/demo/00-openai-prd.md": {
+    "hash": "355e50cba8c40f2cc0293e4223936334fe464d2487ef4f3bee53973d43c4a9b6",
+    "last_content_update": "2025-10-31T05:59:07.875255Z",
+    "path_history": [
+      ".devcontext/demo/openai-prd.md"
+    ]
+  },
+  ".devcontext/demo/01-final-prd.md": {
+    "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "last_content_update": "2025-10-31T05:59:07.875959Z",
+    "path_history": [
+      ".devcontext/demo/final-prd.md"
+    ]
+  },
+  ".devcontext/demo/05-naming.md": {
+    "hash": "0c3133542e4c7d6e0852ed467164ac9ee63b29e93ad2c81fd1c47fafeb8f4fbd",
+    "last_content_update": "2025-10-31T05:59:07.878150Z",
+    "path_history": [
+      ".devcontext/demo/naming.md"
+    ]
+  },
+  ".devcontext/demo/06-original-prd copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:13.969296Z",
+    "path_history": [
+      ".devcontext/demo/05-original-prd copy.md"
+    ]
+  },
+  ".devcontext/demo/07-original-prd copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:13.964755Z",
+    "path_history": [
+      ".devcontext/demo/05-original-prd copy copy.md"
+    ]
+  },
+  ".devcontext/demo/08-original-prd copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:13.966959Z",
+    "path_history": [
+      ".devcontext/demo/05-original-prd copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/09-original-prd copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:21.224761Z",
+    "path_history": [
+      ".devcontext/demo/07-original-prd copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/10-original-prd copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:21.226036Z",
+    "path_history": [
+      ".devcontext/demo/08-original-prd copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/11-original-prd copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:21.227330Z",
+    "path_history": [
+      ".devcontext/demo/06-original-prd copy copy.md"
+    ]
+  },
+  ".devcontext/demo/12-original-prd copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:27.216372Z",
+    "path_history": [
+      ".devcontext/demo/11-original-prd copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/13-original-prd copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:27.217431Z",
+    "path_history": [
+      ".devcontext/demo/09-original-prd copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/14-original-prd copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:27.218528Z",
+    "path_history": [
+      ".devcontext/demo/07-original-prd copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/15-original-prd copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:27.220107Z",
+    "path_history": [
+      ".devcontext/demo/08-original-prd copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/16-original-prd copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:27.221899Z",
+    "path_history": [
+      ".devcontext/demo/06-original-prd copy copy.md"
+    ]
+  },
+  ".devcontext/demo/17-original-prd copy copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:27.222363Z",
+    "path_history": [
+      ".devcontext/demo/10-original-prd copy copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/18-original-prd copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:32.898908Z",
+    "path_history": [
+      ".devcontext/demo/11-original-prd copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/19-original-prd copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:32.899827Z",
+    "path_history": [
+      ".devcontext/demo/09-original-prd copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/20-original-prd copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:32.900476Z",
+    "path_history": [
+      ".devcontext/demo/12-original-prd copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/21-original-prd copy copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:32.902514Z",
+    "path_history": [
+      ".devcontext/demo/10-original-prd copy copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/22-original-prd copy copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:32.904823Z",
+    "path_history": [
+      ".devcontext/demo/15-original-prd copy copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/23-original-prd copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:32.905682Z",
+    "path_history": [
+      ".devcontext/demo/07-original-prd copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/24-original-prd copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:32.906193Z",
+    "path_history": [
+      ".devcontext/demo/06-original-prd copy copy.md"
+    ]
+  },
+  ".devcontext/demo/25-original-prd copy copy copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:32.907195Z",
+    "path_history": [
+      ".devcontext/demo/17-original-prd copy copy copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/26-original-prd copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:32.908184Z",
+    "path_history": [
+      ".devcontext/demo/14-original-prd copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/27-original-prd copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:32.911657Z",
+    "path_history": [
+      ".devcontext/demo/08-original-prd copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/28-original-prd copy copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:32.912217Z",
+    "path_history": [
+      ".devcontext/demo/13-original-prd copy copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/29-original-prd copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:32.916413Z",
+    "path_history": [
+      ".devcontext/demo/16-original-prd copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/30-original-prd copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.856555Z",
+    "path_history": [
+      ".devcontext/demo/11-original-prd copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/31-original-prd copy copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.857195Z",
+    "path_history": [
+      ".devcontext/demo/27-original-prd copy copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/32-original-prd copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.857961Z",
+    "path_history": [
+      ".devcontext/demo/09-original-prd copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/33-original-prd copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.858646Z",
+    "path_history": [
+      ".devcontext/demo/12-original-prd copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/34-original-prd copy copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.861016Z",
+    "path_history": [
+      ".devcontext/demo/10-original-prd copy copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/35-original-prd copy copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.861653Z",
+    "path_history": [
+      ".devcontext/demo/26-original-prd copy copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/36-original-prd copy copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.865350Z",
+    "path_history": [
+      ".devcontext/demo/15-original-prd copy copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/37-original-prd copy copy copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.866584Z",
+    "path_history": [
+      ".devcontext/demo/22-original-prd copy copy copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/38-original-prd copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.867189Z",
+    "path_history": [
+      ".devcontext/demo/07-original-prd copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/39-original-prd copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.867873Z",
+    "path_history": [
+      ".devcontext/demo/06-original-prd copy copy.md"
+    ]
+  },
+  ".devcontext/demo/40-original-prd copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.868870Z",
+    "path_history": [
+      ".devcontext/demo/18-original-prd copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/41-original-prd copy copy copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.870234Z",
+    "path_history": [
+      ".devcontext/demo/17-original-prd copy copy copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/42-original-prd copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.870700Z",
+    "path_history": [
+      ".devcontext/demo/14-original-prd copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/43-original-prd copy copy copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.873179Z",
+    "path_history": [
+      ".devcontext/demo/28-original-prd copy copy copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/44-original-prd copy copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.875094Z",
+    "path_history": [
+      ".devcontext/demo/19-original-prd copy copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/45-original-prd copy copy copy copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.875796Z",
+    "path_history": [
+      ".devcontext/demo/25-original-prd copy copy copy copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/46-original-prd copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.877597Z",
+    "path_history": [
+      ".devcontext/demo/29-original-prd copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/47-original-prd copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.878189Z",
+    "path_history": [
+      ".devcontext/demo/08-original-prd copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/48-original-prd copy copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.879060Z",
+    "path_history": [
+      ".devcontext/demo/13-original-prd copy copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/49-original-prd copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.885959Z",
+    "path_history": [
+      ".devcontext/demo/16-original-prd copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/50-original-prd copy copy copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.887483Z",
+    "path_history": [
+      ".devcontext/demo/21-original-prd copy copy copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/51-original-prd copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.888128Z",
+    "path_history": [
+      ".devcontext/demo/24-original-prd copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/52-original-prd copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.889831Z",
+    "path_history": [
+      ".devcontext/demo/23-original-prd copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/53-original-prd copy copy copy copy copy.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T06:09:38.891639Z",
+    "path_history": [
+      ".devcontext/demo/20-original-prd copy copy copy copy copy.md"
+    ]
+  },
+  ".devcontext/demo/00-openai-spec.md": {
+    "hash": "355e50cba8c40f2cc0293e4223936334fe464d2487ef4f3bee53973d43c4a9b6",
+    "last_content_update": "2025-10-31T06:33:45.013637Z",
+    "path_history": [
+      ".devcontext/demo/00-openai-spec.md"
+    ]
+  },
+  ".devcontext/demo/01-perplexity-prd.md": {
+    "hash": "3493d21de2caccf02f3959f3b1d3518bdead90d41aa55b2959ce8cfc9e812bc3",
+    "last_content_update": "2025-10-31T05:59:07.876735Z",
+    "path_history": [
+      ".devcontext/demo/perplexity-prd.md"
+    ]
+  },
+  ".devcontext/demo/02-prd-from-code-prompt.md": {
+    "hash": "4f94cbbc1f8c622ea9cdd53f8248ea2f60444c83f7eaad4ed87ab09dea04b00e",
+    "last_content_update": "2025-10-31T05:59:07.876993Z",
+    "path_history": [
+      ".devcontext/demo/prd-from-code-prompt.md"
+    ]
+  },
+  ".devcontext/demo/03-prd-from-prd-from-code-prompt.md": {
+    "hash": "e4c56a1727458944a37e11255ce75844c4bf5a65e2311129bc0658dfe630716d",
+    "last_content_update": "2025-10-31T05:59:07.877085Z",
+    "path_history": [
+      ".devcontext/demo/prd-from-prd-from-code-prompt.md"
+    ]
+  },
+  ".devcontext/demo/04-original-prd.md": {
+    "hash": "750f36f65f21447538b47bf0d83f25e6a67bf1ae73932802522e4ff80f2b2db3",
+    "last_content_update": "2025-10-31T05:59:07.879060Z",
+    "path_history": [
+      ".devcontext/demo/original-prd.md"
+    ]
+  },
+  ".devcontext/demo/05-pre-commit-setup.md": {
+    "hash": "498e7d5297a06b896337f25650e71dfdc985456b8de02d66ef522b6611d0b3b3",
+    "last_content_update": "2025-10-31T06:29:03.491314Z",
+    "path_history": [
+      ".devcontext/demo/pre-commit-setup.md"
+    ]
+  },
+  ".devcontext/demo/06-doc3.md": {
+    "hash": "f5c37ed78e66e590aa594af27fd556c941dc01a978cf5b4f0363bd6002422151",
+    "last_content_update": "2025-10-31T06:48:28.048525Z",
+    "path_history": [
+      ".devcontext/demo/01-doc3.md"
+    ]
+  },
+  ".devcontext/demo/07-USAGE.mdupdate README update README  copy 6.bak": {
+    "hash": "817a4e00ad3b28d971dd27619ef30de516b800d3d72e90f7b74fe237964dd805",
+    "last_content_update": "2025-10-31T06:48:48.001001Z",
+    "path_history": [
+      ".devcontext/demo/USAGE.mdupdate README update README  copy 6.bak"
+    ]
+  },
+  ".devcontext/demo/08-USAGE.md copy 6.bak": {
+    "hash": "817a4e00ad3b28d971dd27619ef30de516b800d3d72e90f7b74fe237964dd805",
+    "last_content_update": "2025-10-31T06:48:48.001313Z",
+    "path_history": [
+      ".devcontext/demo/USAGE.md copy 6.bak"
+    ]
+  },
+  ".devcontext/demo/09-USAGE.md copy 4.bak": {
+    "hash": "817a4e00ad3b28d971dd27619ef30de516b800d3d72e90f7b74fe237964dd805",
+    "last_content_update": "2025-10-31T06:48:48.003671Z",
+    "path_history": [
+      ".devcontext/demo/USAGE.md copy 4.bak"
+    ]
+  },
+  ".devcontext/demo/10-USAGE.mdupdate README update README  copy 3.bak": {
+    "hash": "817a4e00ad3b28d971dd27619ef30de516b800d3d72e90f7b74fe237964dd805",
+    "last_content_update": "2025-10-31T06:48:48.005760Z",
+    "path_history": [
+      ".devcontext/demo/USAGE.mdupdate README update README  copy 3.bak"
+    ]
+  },
+  ".devcontext/demo/11-USAGE.mdupdate README update README  copy.bak": {
+    "hash": "817a4e00ad3b28d971dd27619ef30de516b800d3d72e90f7b74fe237964dd805",
+    "last_content_update": "2025-10-31T06:48:48.009160Z",
+    "path_history": [
+      ".devcontext/demo/USAGE.mdupdate README update README  copy.bak"
+    ]
+  },
+  ".devcontext/demo/12-USAGE.mdupdate README update README  copy 1.bak": {
+    "hash": "817a4e00ad3b28d971dd27619ef30de516b800d3d72e90f7b74fe237964dd805",
+    "last_content_update": "2025-10-31T06:48:48.009394Z",
+    "path_history": [
+      ".devcontext/demo/USAGE.mdupdate README update README  copy 1.bak"
+    ]
+  },
+  ".devcontext/demo/13-USAGE.md copy 7.bak": {
+    "hash": "817a4e00ad3b28d971dd27619ef30de516b800d3d72e90f7b74fe237964dd805",
+    "last_content_update": "2025-10-31T06:48:48.009588Z",
+    "path_history": [
+      ".devcontext/demo/USAGE.md copy 7.bak"
+    ]
+  },
+  ".devcontext/demo/06-USAGE.mdupdate README update README  copy 2.bak": {
+    "hash": "817a4e00ad3b28d971dd27619ef30de516b800d3d72e90f7b74fe237964dd805",
+    "last_content_update": "2025-10-31T06:48:48.009689Z",
+    "path_history": [
+      ".devcontext/demo/USAGE.mdupdate README update README  copy 2.bak"
+    ]
+  },
+  ".devcontext/demo/07-USAGE.md copy 3.bak": {
+    "hash": "817a4e00ad3b28d971dd27619ef30de516b800d3d72e90f7b74fe237964dd805",
+    "last_content_update": "2025-10-31T06:48:48.009741Z",
+    "path_history": [
+      ".devcontext/demo/USAGE.md copy 3.bak"
+    ]
+  },
+  ".devcontext/demo/08-USAGE.mdupdate README update README  copy 5.bak": {
+    "hash": "817a4e00ad3b28d971dd27619ef30de516b800d3d72e90f7b74fe237964dd805",
+    "last_content_update": "2025-10-31T06:48:48.009792Z",
+    "path_history": [
+      ".devcontext/demo/USAGE.mdupdate README update README  copy 5.bak"
+    ]
+  },
+  ".devcontext/demo/09-USAGE.mdupdate README update README  copy 4.bak": {
+    "hash": "817a4e00ad3b28d971dd27619ef30de516b800d3d72e90f7b74fe237964dd805",
+    "last_content_update": "2025-10-31T06:48:48.009841Z",
+    "path_history": [
+      ".devcontext/demo/USAGE.mdupdate README update README  copy 4.bak"
+    ]
+  },
+  ".devcontext/demo/10-USAGE.md copy 5.bak": {
+    "hash": "817a4e00ad3b28d971dd27619ef30de516b800d3d72e90f7b74fe237964dd805",
+    "last_content_update": "2025-10-31T06:48:48.009891Z",
+    "path_history": [
+      ".devcontext/demo/USAGE.md copy 5.bak"
+    ]
+  },
+  ".devcontext/demo/11-USAGE.md copy 8.bak": {
+    "hash": "817a4e00ad3b28d971dd27619ef30de516b800d3d72e90f7b74fe237964dd805",
+    "last_content_update": "2025-10-31T06:48:48.009940Z",
+    "path_history": [
+      ".devcontext/demo/USAGE.md copy 8.bak"
+    ]
+  },
+  ".devcontext/demo/12-USAGE.mdupdate README update README .bak": {
+    "hash": "817a4e00ad3b28d971dd27619ef30de516b800d3d72e90f7b74fe237964dd805",
+    "last_content_update": "2025-10-31T06:48:48.010087Z",
+    "path_history": [
+      ".devcontext/demo/USAGE.mdupdate README update README .bak"
+    ]
+  }
+}

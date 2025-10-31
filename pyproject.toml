@@ -1,17 +1,38 @@
-[tool.poetry]
+[project]
 name = "chronodocs"
 version = "0.1.0"
 description = "A temporal custodian for documentation systems."
-authors = ["Jules"]
+authors = [
+    {name = "@asuworks, Jules (Gemini 2.5 pro), Zed Agent (Claude Sonnet 4.5)"}
+]
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml>=6.0",
+    "watchdog>=4.0.0",
+    "rich>=13.0.0",
+]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-pyyaml = "^6.0"
-watchdog = "^4.0.0"
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.0"
+[project.scripts]
+chronodocs = "chronodocs.cli:main"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["chronodocs"]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.3",
+]

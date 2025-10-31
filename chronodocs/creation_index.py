@@ -2,16 +2,18 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 # A unique identifier for a file, combining inode and device ID.
 FileKey = str
+
 
 class CreationIndex:
     """
     Manages the .creation_index.json file, which stores the creation
     time for each document to maintain a stable chronological order.
     """
+
     def __init__(self, index_path: Path):
         self.index_path = index_path
         self._entries: Dict[FileKey, Dict[str, Any]] = self._load()
@@ -21,7 +23,7 @@ class CreationIndex:
         if not self.index_path.is_file():
             return {}
         try:
-            with open(self.index_path, 'r') as f:
+            with open(self.index_path, "r") as f:
                 return json.load(f)
         except (json.JSONDecodeError, IOError):
             # If the file is corrupted or unreadable, start fresh.
@@ -29,8 +31,11 @@ class CreationIndex:
 
     def save(self):
         """Saves the index to the JSON file atomically."""
-        temp_path = self.index_path.with_suffix('.tmp')
-        with open(temp_path, 'w') as f:
+        # Ensure parent directory exists
+        self.index_path.parent.mkdir(parents=True, exist_ok=True)
+
+        temp_path = self.index_path.with_suffix(".tmp")
+        with open(temp_path, "w") as f:
             json.dump(self._entries, f, indent=2)
         os.replace(temp_path, self.index_path)
 
@@ -41,7 +46,7 @@ class CreationIndex:
         Uses inode/device on POSIX systems for stability across renames.
         Falls back to the filename on other systems (like Windows).
         """
-        if os.name == 'posix':
+        if os.name == "posix":
             stat = filepath.stat()
             return f"ino:{stat.st_ino}-dev:{stat.st_dev}"
         else:
@@ -61,7 +66,7 @@ class CreationIndex:
             "filename": filepath.name,
             "recorded_ctime": recorded_ctime,
         }
-        if os.name == 'posix':
+        if os.name == "posix":
             stat = filepath.stat()
             entry["inode"] = stat.st_ino
             entry["device"] = stat.st_dev
@@ -78,7 +83,7 @@ class CreationIndex:
         """Gets the recorded creation time for a file."""
         key = self.get_file_key(filepath)
         entry = self._entries.get(key)
-        return entry['recorded_ctime'] if entry else None
+        return entry["recorded_ctime"] if entry else None
 
     def get_all_entries(self) -> Dict[FileKey, Dict[str, Any]]:
         """Returns all entries in the index."""

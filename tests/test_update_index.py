@@ -1,13 +1,15 @@
-import pytest
-from pathlib import Path
-import time
 import os
+from pathlib import Path
+
+import pytest
 
 from chronodocs.update_index import UpdateIndex
+
 
 @pytest.fixture
 def temp_index_dir(tmp_path: Path) -> Path:
     return tmp_path
+
 
 @pytest.fixture
 def sample_file(temp_index_dir: Path) -> Path:
@@ -15,6 +17,7 @@ def sample_file(temp_index_dir: Path) -> Path:
     file_path = temp_index_dir / "test_file.md"
     file_path.write_text("Initial content")
     return file_path
+
 
 def test_update_file_and_save(temp_index_dir: Path, sample_file: Path):
     """Test updating the index with a new file and saving."""
@@ -41,6 +44,7 @@ def test_update_file_and_save(temp_index_dir: Path, sample_file: Path):
     assert updated_hash is not None
     assert initial_hash != updated_hash
 
+
 def test_has_changed(temp_index_dir: Path, sample_file: Path):
     """Test the has_changed method."""
     index_path = temp_index_dir / ".update_index.json"
@@ -56,6 +60,7 @@ def test_has_changed(temp_index_dir: Path, sample_file: Path):
     sample_file.write_text("New content here")
     assert index.has_changed(sample_file)
 
+
 def test_remove_file(temp_index_dir: Path, sample_file: Path):
     """Test removing a file from the update index."""
     index_path = temp_index_dir / ".update_index.json"
@@ -66,6 +71,7 @@ def test_remove_file(temp_index_dir: Path, sample_file: Path):
 
     index.remove_file(sample_file)
     assert str(sample_file) not in index.get_all_entries()
+
 
 def test_rename_handling(temp_index_dir: Path):
     """Test that the index correctly handles file renames."""

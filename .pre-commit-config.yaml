@@ -1,0 +1,13 @@
+# Pre-commit hooks configuration
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.2
+    hooks:
+      # Run the linter with import sorting
+      - id: ruff
+        args: [--fix]
+      # Run the formatter
+      - id: ruff-format

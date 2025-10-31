@@ -1,16 +1,21 @@
-import time
 import logging
+import time
 from pathlib import Path
-from threading import Timer
+from threading import Lock, Timer
 
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler, FileSystemEvent
 
-from .reconciler import Reconciler
 from .config import Config
+from .reconciler import Reconciler
 
 # Basic logging configuration
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+
 
 class DebouncedReconcilerHandler(FileSystemEventHandler):
     """
@@ -23,31 +28,51 @@ class DebouncedReconcilerHandler(FileSystemEventHandler):
         self.reconciler = reconciler
         self.debounce_interval = debounce_interval_seconds
         self._timer: Timer | None = None
-        self._is_reconciling = False # Re-entrancy guard
+        self._timer_lock = Lock()  # Protects timer state
+        self._reconcile_lock = Lock()  # Prevents concurrent reconciliations
+        self._last_reconcile_time = 0.0  # Track last reconciliation time
+        self._min_reconcile_interval = 5.0  # Minimum seconds between reconciliations
 
     def _dispatch_reconciliation(self):
         """Cancels any pending timer and starts a new one."""
-        if self._timer is not None:
-            self._timer.cancel()
+        with self._timer_lock:
+            if self._timer is not None:
+                self._timer.cancel()
 
-        self._timer = Timer(self.debounce_interval, self._run_reconciliation)
-        self._timer.start()
+            self._timer = Timer(self.debounce_interval, self._run_reconciliation)
+            self._timer.start()
 
     def _run_reconciliation(self):
         """The callback that performs the reconciliation."""
-        if self._is_reconciling:
-            logging.warning("Reconciliation is already in progress, skipping trigger.")
+        # Try to acquire the lock; if we can't, another reconciliation is running
+        if not self._reconcile_lock.acquire(blocking=False):
+            logging.debug("Reconciliation is already in progress, skipping trigger.")
             return
 
-        logging.info(f"Changes detected in '{self.reconciler.phase_dir}'. Debounce timer expired. Running reconciliation...")
-        self._is_reconciling = True
         try:
+            # Check if enough time has passed since last reconciliation
+            current_time = time.time()
+            time_since_last = current_time - self._last_reconcile_time
+
+            if time_since_last < self._min_reconcile_interval:
+                logging.debug(
+                    f"Skipping reconciliation: only {time_since_last:.1f}s since last run "
+                    f"(min interval: {self._min_reconcile_interval}s)"
+                )
+                return
+
+            logging.info(
+                f"Changes detected in '{self.reconciler.phase_dir}'. Debounce timer expired. Running reconciliation..."
+            )
             self.reconciler.reconcile()
+            self._last_reconcile_time = time.time()  # Update last reconciliation time
             logging.info("Reconciliation complete.")
         except Exception as e:
-            logging.error(f"An error occurred during reconciliation: {e}", exc_info=True)
+            logging.error(
+                f"An error occurred during reconciliation: {e}", exc_info=True
+            )
         finally:
-            self._is_reconciling = False
+            self._reconcile_lock.release()
 
     def on_any_event(self, event: FileSystemEvent):
         """Catches all events and triggers the debounced reconciliation."""
@@ -55,11 +80,25 @@ class DebouncedReconcilerHandler(FileSystemEventHandler):
         if event.is_directory:
             return
 
-        # Also ignore changes to files that are explicitly ignored.
-        if self.reconciler._is_ignored(Path(event.src_path)):
-             logging.debug(f"Ignoring event for file: {event.src_path}")
-             return
+        # Ignore read-only events (opened, closed_no_write)
+        if event.event_type in ("opened", "closed_no_write"):
+            return
 
+        # Also ignore changes to files that are explicitly ignored.
+        filepath = Path(event.src_path)
+
+        # Log the full path for debugging
+        logging.debug(f"Event received: {event.event_type} for {event.src_path}")
+
+        if self.reconciler._is_ignored(filepath):
+            logging.debug(
+                f"✓ Ignoring event for file: {filepath.name} (matched ignore pattern)"
+            )
+            return
+
+        logging.info(
+            f"→ Event detected for file: {filepath.name} (type: {event.event_type})"
+        )
         self._dispatch_reconciliation()
 
 
@@ -74,15 +113,27 @@ class PhaseWatcher:
     def run(self):
         """Starts the watcher and blocks until a KeyboardInterrupt."""
         if not self.phase_dir.is_dir():
-            logging.warning(f"Phase directory '{self.phase_dir}' not found. Attempting to create it.")
+            logging.warning(
+                f"Phase directory '{self.phase_dir}' not found. Attempting to create it."
+            )
             try:
                 self.phase_dir.mkdir(parents=True, exist_ok=True)
             except OSError as e:
-                logging.error(f"Failed to create phase directory '{self.phase_dir}': {e}")
+                logging.error(
+                    f"Failed to create phase directory '{self.phase_dir}': {e}"
+                )
                 return
 
         reconciler = Reconciler(self.phase_dir, self.config)
         debounce_seconds = self.config.debounce_phase / 1000.0  # Convert ms to seconds
+
+        # Run initial reconciliation on startup to catch changes made while watcher was stopped
+        logging.info(f"Running initial reconciliation for '{self.phase_dir}'...")
+        try:
+            reconciler.reconcile()
+            logging.info("Initial reconciliation complete.")
+        except Exception as e:
+            logging.error(f"Error during initial reconciliation: {e}", exc_info=True)
 
         event_handler = DebouncedReconcilerHandler(reconciler, debounce_seconds)
 

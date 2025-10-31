@@ -1,14 +1,17 @@
-import pytest
-from pathlib import Path
-import time
 import os
+import time
+from pathlib import Path
+
+import pytest
 
 from chronodocs.creation_index import CreationIndex
+
 
 @pytest.fixture
 def temp_index_dir(tmp_path: Path) -> Path:
     # A temporary directory for index files
     return tmp_path
+
 
 @pytest.fixture
 def sample_files(temp_index_dir: Path) -> list[Path]:
@@ -22,6 +25,7 @@ def sample_files(temp_index_dir: Path) -> list[Path]:
         # Sleep to ensure distinct ctimes, although on modern filesystems it's not always guaranteed.
         time.sleep(0.01)
     return files
+
 
 def test_add_file_and_save(temp_index_dir: Path, sample_files: list[Path]):
     """Test adding files to the index and saving it."""
@@ -45,7 +49,7 @@ def test_add_file_and_save(temp_index_dir: Path, sample_files: list[Path]):
 
     file1_key = new_index.get_file_key(sample_files[0])
     assert file1_key in new_index.get_all_entries()
-    assert new_index.get_all_entries()[file1_key]['filename'] == "file1.md"
+    assert new_index.get_all_entries()[file1_key]["filename"] == "file1.md"
 
 
 def test_remove_file(temp_index_dir: Path, sample_files: list[Path]):
@@ -65,6 +69,7 @@ def test_remove_file(temp_index_dir: Path, sample_files: list[Path]):
     file1_key = index.get_file_key(sample_files[0])
     assert file1_key not in index.get_all_entries()
 
+
 def test_get_ctime_for_file(temp_index_dir: Path, sample_files: list[Path]):
     """Test retrieving the recorded creation time."""
     index_path = temp_index_dir / ".creation_index.json"
@@ -78,9 +83,10 @@ def test_get_ctime_for_file(temp_index_dir: Path, sample_files: list[Path]):
     assert ctime is not None
     assert start_time <= ctime <= end_time
 
+
 def test_file_key_stability_on_rename(temp_index_dir: Path):
     """On POSIX systems, the key should be stable even if a file is renamed."""
-    if os.name != 'posix':
+    if os.name != "posix":
         pytest.skip("Inode/device keying is only supported on POSIX.")
 
     index_path = temp_index_dir / ".creation_index.json"

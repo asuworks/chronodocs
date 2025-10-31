@@ -1,11 +1,12 @@
-import os
 import fnmatch
+import os
 from pathlib import Path
 from typing import List, Tuple
 
+from .config import Config
 from .creation_index import CreationIndex
 from .update_index import UpdateIndex
-from .config import Config
+
 
 class Reconciler:
     """
@@ -20,7 +21,11 @@ class Reconciler:
         self.creation_index = CreationIndex(phase_dir / ".creation_index.json")
         self.update_index = UpdateIndex(phase_dir / ".update_index.json")
         # Combine config ignore patterns with mandatory ones for reconciler
-        self._ignore_patterns = set(config.ignore_patterns) | {".creation_index.json", ".update_index.json", "change_log.md"}
+        self._ignore_patterns = set(config.ignore_patterns) | {
+            ".creation_index.json",
+            ".update_index.json",
+            "change_log.md",
+        }
 
     def _is_ignored(self, filepath: Path) -> bool:
         """
@@ -41,11 +46,15 @@ class Reconciler:
         5. Saves the updated indices.
         """
         if not self.phase_dir.is_dir():
-            # In case the phase directory doesn't exist yet.
-            return
+            # Create the phase directory if it doesn't exist yet.
+            self.phase_dir.mkdir(parents=True, exist_ok=True)
 
         # 1. Scan the directory and update indices with new/existing files.
-        files_on_disk = {p for p in self.phase_dir.iterdir() if p.is_file() and not self._is_ignored(p)}
+        files_on_disk = {
+            p
+            for p in self.phase_dir.iterdir()
+            if p.is_file() and not self._is_ignored(p)
+        }
         for filepath in files_on_disk:
             self.creation_index.add_file(filepath)
             self.update_index.update_file(filepath)
@@ -64,22 +73,27 @@ class Reconciler:
             if key in self.creation_index._entries:
                 del self.creation_index._entries[key]
 
-
         # 3. Determine correct ordering and plan renames.
         all_indexed_files = self.creation_index.get_all_entries().values()
-        current_files_map = {self.creation_index.get_file_key(f): f for f in files_on_disk}
+        current_files_map = {
+            self.creation_index.get_file_key(f): f for f in files_on_disk
+        }
 
         sorted_files = sorted(
             [
-                (entry['recorded_ctime'], current_files_map[entry['key']])
+                (
+                    entry["recorded_ctime"],
+                    entry["inode"],
+                    current_files_map[entry["key"]],
+                )
                 for entry in all_indexed_files
-                if entry['key'] in current_files_map
+                if entry["key"] in current_files_map
             ],
-            key=lambda x: x[0]
+            key=lambda x: (x[0], x[1]),
         )
 
         rename_plan: List[Tuple[Path, Path]] = []
-        for i, (_, old_path) in enumerate(sorted_files):
+        for i, (_, _, old_path) in enumerate(sorted_files):
             prefix = f"{i:02d}-"
             current_name = old_path.name
 
@@ -87,7 +101,11 @@ class Reconciler:
                 continue
 
             # Strip existing numerical prefix if it exists
-            if len(current_name) > 3 and current_name[:2].isdigit() and current_name[2] == '-':
+            if (
+                len(current_name) > 3
+                and current_name[:2].isdigit()
+                and current_name[2] == "-"
+            ):
                 new_name_base = current_name[3:]
             else:
                 new_name_base = current_name
@@ -102,17 +120,16 @@ class Reconciler:
         if dry_run:
             for old_path, new_path in rename_plan:
                 print(f"[DRY RUN] Would rename {old_path.name} to {new_path.name}")
-            return
-
-        for old_path, new_path in rename_plan:
-            try:
-                # Use os.rename for atomicity on most platforms
-                os.rename(old_path, new_path)
-                # Important: update index to reflect the rename
-                self.update_index.update_file(new_path, old_path=old_path)
-            except OSError as e:
-                # Basic error logging
-                print(f"Error renaming file {old_path} to {new_path}: {e}")
+        else:
+            for old_path, new_path in rename_plan:
+                try:
+                    # Use os.rename for atomicity on most platforms
+                    os.rename(old_path, new_path)
+                    # Important: update index to reflect the rename
+                    self.update_index.update_file(new_path, old_path=old_path)
+                except OSError as e:
+                    # Basic error logging
+                    print(f"Error renaming file {old_path} to {new_path}: {e}")
 
         # 5. Save the updated indices to disk.
         self.creation_index.save()

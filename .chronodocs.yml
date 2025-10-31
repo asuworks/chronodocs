@@ -1,48 +1,104 @@
 # ChronoDocs Configuration
 
 # Phase directory template; {phase} is interpolated at runtime
-phase_dir_template: ".devcontext/progress/{phase}"
+phase_dir_template: ".devcontext/{phase}"
 
 # Directories/files to watch (root watcher)
 watch_paths:
-- "src/"
-- "docs/"
-- ".devcontext/progress/"
-- "scripts/"
+    - "."
+    # - "chronodocs/"
+    # - "tests/"
+    # - ".devcontext/"
+    # - "scripts/"
 
 # Patterns to ignore (any watcher)
 ignore_patterns:
-- ".git/"
-- "node_modules/"
-- ".venv/"
-- "__pycache__/"
-- ".creation_index.json"
-- ".update_index.json"
-- "change_log.md"
-- "*.tmp"
-- ".DS_Store"
+    - ".git/"
+    - "node_modules/"
+    - ".venv/"
+    - "__pycache__/"
+    - ".creation_index.json"
+    - ".update_index.json"
+    - "change_log.md"
+    - "*.tmp"
+    - ".DS_Store"
+    # Python
+    - "__pycache__"
+    - ".pytest_cache"
+    - ".mypy_cache"
+    - ".ruff_cache"
+    - ".tox"
+    - ".coverage"
+    - ".venv"
+    - "venv"
+    - "env"
+    - "Pipfile.lock"
+    - "poetry.lock"
+    # JavaScript / TypeScrip
+    - "node_modules"
+    - "dist"
+    - "build"
+    - "out"
+    - ".next"
+    - ".nuxt"
+    - ".parcel-cache"
+    - "bun.lockb"
+    - "package-lock.json"
+    - "yarn.lock"
+    # IDE / O
+    - ".vscode"
+    - ".idea"
+    - ".DS_Store"
+    - "Thumbs.db"
+    # Git and watcher internal
+    - ".git"
+    - ".gitignore"
+    - ".gitmodules"
+    - ".gitattributes"
+    - ".pyc"
+    - ".pyo"
+    - ".pyd"
+    - ".so"
+    - ".dll"
+    - ".o"
+    - ".a"
+    - ".obj"
+    # Transpiled / bundle outpu
+    - ".map"
+    - ".min.js"
+    - ".min.css"
+    # Logs / dump
+    - ".log"
+    - ".tmp"
+    - ".swp"
+    - ".swo"
+    # Images / binaries (optional, skip watching)
+    - ".png"
+    - ".jpg"
+    - ".jpeg"
+    - ".gif"
+    - ".bmp"
+    - ".ico"
+    - ".svg"
 
 # Debounce windows (milliseconds)
 debounce:
-phase: 2000 # phase watcher debounce
-root: 3000 # root watcher debounce
-
-# Command to run on root changes
-make_command: "make change_log"
+    phase: 2000 # phase watcher debounce
+    root: 3000 # root watcher debounce
 
 # Default report grouping
 report:
-group_by: "updated_day" # updated_day | created_day | folder | status
-sort_by: "updated_desc" # updated_asc | updated_desc | created_asc | created_desc
-extensions:
-- ".md"
-- ".py"
-- ".txt"
+    group_by: "updated_day_then_folder" # updated_day | created_day | folder | status | updated_day_then_folder
+    sort_by: "updated_desc" # updated_asc | updated_desc | created_asc | created_desc
+    extensions: [] # include all files into report (except for ignore_patterns above)
+        # - ".md"
+        # - ".py"
+        # - ".txt"
 
 # Logging
 logging:
-level: "INFO" # DEBUG | INFO | ERROR
-format: "text" # text | json
+    level: "INFO" # DEBUG | INFO | ERROR
+    format: "text" # text | json
 
 # Index keying strategy (optional)
 # index_strategy: "inode" # inode | name | hybrid (default)
@@ -55,5 +111,5 @@ auto_gitignore: true
 
 # Timestamp sources (priority order)
 timestamp_sources:
-- "git" # git log
-- "filesystem" # file mtime / birthtime
+    - "git" # git log
+    - "filesystem" # file mtime / birthtime

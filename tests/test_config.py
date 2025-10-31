@@ -1,8 +1,10 @@
-import pytest
 from pathlib import Path
+
+import pytest
 import yaml
 
-from chronodocs.config import Config
+from chronodocs.config import Config, ConfigError
+
 
 @pytest.fixture
 def temp_config_file(tmp_path: Path) -> Path:
@@ -14,9 +16,10 @@ def temp_config_file(tmp_path: Path) -> Path:
         "make_command": "echo 'hello'",
     }
     config_path = tmp_path / "config.yml"
-    with open(config_path, 'w') as f:
+    with open(config_path, "w") as f:
         yaml.dump(config_data, f)
     return config_path
+
 
 def test_load_config_success(temp_config_file: Path):
     """Test that a valid config file is loaded correctly."""
@@ -28,16 +31,19 @@ def test_load_config_success(temp_config_file: Path):
     assert config.debounce_root == 2500
     assert config.make_command == "echo 'hello'"
 
+
 @pytest.fixture
 def empty_config_file(tmp_path: Path) -> Path:
     config_path = tmp_path / "empty_config.yml"
     config_path.touch()
     return config_path
 
+
 def test_load_config_not_found():
-    """Test that a FileNotFoundError is raised if the config file doesn't exist."""
-    with pytest.raises(FileNotFoundError):
+    """Test that a ConfigError is raised if the config file doesn't exist."""
+    with pytest.raises(ConfigError):
         Config(Path("non_existent_config.yml"))
+
 
 def test_config_defaults(empty_config_file: Path):
     """Test that default values are returned for missing keys."""
