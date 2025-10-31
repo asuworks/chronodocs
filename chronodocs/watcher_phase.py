@@ -1,4 +1,5 @@
 import logging
+import random
 import time
 from pathlib import Path
 from threading import Lock, Timer
@@ -24,22 +25,29 @@ class DebouncedReconcilerHandler(FileSystemEventHandler):
     burst of file changes (e.g., when an editor saves a file).
     """
 
-    def __init__(self, reconciler: Reconciler, debounce_interval_seconds: float):
+    def __init__(
+        self,
+        reconciler: Reconciler,
+        debounce_interval_seconds: float,
+        min_reconcile_interval_seconds: float = 5.0,
+    ):
         self.reconciler = reconciler
         self.debounce_interval = debounce_interval_seconds
         self._timer: Timer | None = None
-        self._timer_lock = Lock()  # Protects timer state
-        self._reconcile_lock = Lock()  # Prevents concurrent reconciliations
-        self._last_reconcile_time = 0.0  # Track last reconciliation time
-        self._min_reconcile_interval = 5.0  # Minimum seconds between reconciliations
+        self._timer_lock = Lock()
+        self._reconcile_lock = Lock()
+        self._last_reconcile_time = 0.0
+        self._min_reconcile_interval = min_reconcile_interval_seconds
 
     def _dispatch_reconciliation(self):
-        """Cancels any pending timer and starts a new one."""
+        """Cancels any pending timer and starts a new one with a slight jitter."""
         with self._timer_lock:
             if self._timer is not None:
                 self._timer.cancel()
 
-            self._timer = Timer(self.debounce_interval, self._run_reconciliation)
+            jitter = random.uniform(0, 1)
+            interval = self.debounce_interval + jitter
+            self._timer = Timer(interval, self._run_reconciliation)
             self._timer.start()
 
     def _run_reconciliation(self):
@@ -105,10 +113,26 @@ class DebouncedReconcilerHandler(FileSystemEventHandler):
 class PhaseWatcher:
     """Initializes and runs the file system observer for a phase directory."""
 
-    def __init__(self, phase_dir: Path, config: Config):
+    def __init__(
+        self,
+        phase_dir: Path,
+        config: Config,
+        debounce_interval: float = None,
+        min_reconcile_interval: float = None,
+    ):
         self.phase_dir = phase_dir
         self.config = config
         self.observer = Observer()
+        self.debounce_interval = (
+            debounce_interval
+            if debounce_interval is not None
+            else self.config.debounce_phase / 1000.0
+        )
+        self.min_reconcile_interval = (
+            min_reconcile_interval
+            if min_reconcile_interval is not None
+            else getattr(self.config, "min_interval_phase", 5000) / 1000.0
+        )
 
     def run(self):
         """Starts the watcher and blocks until a KeyboardInterrupt."""
@@ -125,9 +149,8 @@ class PhaseWatcher:
                 return
 
         reconciler = Reconciler(self.phase_dir, self.config)
-        debounce_seconds = self.config.debounce_phase / 1000.0  # Convert ms to seconds
 
-        # Run initial reconciliation on startup to catch changes made while watcher was stopped
+        # Run initial reconciliation on startup
         logging.info(f"Running initial reconciliation for '{self.phase_dir}'...")
         try:
             reconciler.reconcile()
@@ -135,7 +158,9 @@ class PhaseWatcher:
         except Exception as e:
             logging.error(f"Error during initial reconciliation: {e}", exc_info=True)
 
-        event_handler = DebouncedReconcilerHandler(reconciler, debounce_seconds)
+        event_handler = DebouncedReconcilerHandler(
+            reconciler, self.debounce_interval, self.min_reconcile_interval
+        )
 
         self.observer.schedule(event_handler, str(self.phase_dir), recursive=False)
         self.observer.start()

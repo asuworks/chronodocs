@@ -63,6 +63,16 @@ class Config:
         return debounce.get("root", 3000)
 
     @property
+    def min_interval_phase(self) -> int:
+        debounce = self.get("debounce", {})
+        return debounce.get("min_interval_phase", 8000)
+
+    @property
+    def min_interval_root(self) -> int:
+        debounce = self.get("debounce", {})
+        return debounce.get("min_interval_root", 8000)
+
+    @property
     def make_command(self) -> Optional[str]:
         return self.get("make_command")
 

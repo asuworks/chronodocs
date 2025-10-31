@@ -1,7 +1,10 @@
 import fnmatch
+import logging
 import os
 from pathlib import Path
 from typing import List, Tuple
+
+from filelock import FileLock, Timeout
 
 from .config import Config
 from .creation_index import CreationIndex
@@ -20,16 +23,22 @@ class Reconciler:
         self.config = config
         self.creation_index = CreationIndex(phase_dir / ".creation_index.json")
         self.update_index = UpdateIndex(phase_dir / ".update_index.json")
+
         # Combine config ignore patterns with mandatory ones for reconciler
-        self._ignore_patterns = set(config.ignore_patterns) | {
+        default_ignores = {"*.tmp", "*.lock", "~*", ".*.swp"}
+        mandatory_ignores = {
             ".creation_index.json",
             ".update_index.json",
             "change_log.md",
         }
+        self._ignore_patterns = (
+            set(config.ignore_patterns) | mandatory_ignores | default_ignores
+        )
 
     def _is_ignored(self, filepath: Path) -> bool:
         """
         Check if a file should be ignored based on the config, supporting glob patterns.
+        This is a simplified version for the reconciler, which only operates on file names.
         """
         for pattern in self._ignore_patterns:
             if fnmatch.fnmatch(filepath.name, pattern):
@@ -119,17 +128,45 @@ class Reconciler:
         # 4. Execute the rename plan.
         if dry_run:
             for old_path, new_path in rename_plan:
-                print(f"[DRY RUN] Would rename {old_path.name} to {new_path.name}")
+                logging.info(
+                    f"[DRY RUN] Would rename {old_path.name} to {new_path.name}"
+                )
         else:
             for old_path, new_path in rename_plan:
+                lock_path = old_path.with_suffix(f"{old_path.suffix}.lock")
                 try:
-                    # Use os.rename for atomicity on most platforms
-                    os.rename(old_path, new_path)
-                    # Important: update index to reflect the rename
-                    self.update_index.update_file(new_path, old_path=old_path)
+                    # Lock the file to prevent other processes from modifying it
+                    # Timeout after a short period to avoid getting stuck.
+                    with FileLock(lock_path, timeout=0.5):
+                        logging.debug(f"Acquired lock for {old_path.name}")
+
+                        # Re-check existence to handle cases where the file was
+                        # deleted after scanning.
+                        if not old_path.exists():
+                            logging.warning(
+                                f"File {old_path.name} was deleted before renaming, skipping."
+                            )
+                            continue
+
+                        os.rename(old_path, new_path)
+                        logging.info(f"Renamed {old_path.name} to {new_path.name}")
+
+                        # Update index to reflect the rename
+                        self.update_index.update_file(new_path, old_path=old_path)
+
+                except Timeout:
+                    logging.warning(
+                        f"Could not acquire lock for {old_path.name}, another process may be using it. Skipping rename."
+                    )
                 except OSError as e:
-                    # Basic error logging
-                    print(f"Error renaming file {old_path} to {new_path}: {e}")
+                    logging.error(
+                        f"Error renaming file {old_path} to {new_path}: {e}",
+                        exc_info=True,
+                    )
+                finally:
+                    # Ensure the lock file is cleaned up
+                    if lock_path.exists():
+                        lock_path.unlink()
 
         # 5. Save the updated indices to disk.
         self.creation_index.save()
