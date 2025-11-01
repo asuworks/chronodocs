@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from chronodocs.git_helpers import GitInfoProvider
+from chronodocs.update_index import UpdateIndex
 
 
 @pytest.fixture
@@ -22,6 +23,12 @@ def temp_git_repo(tmp_path: Path) -> Path:
     )
 
     return repo_path
+
+
+@pytest.fixture
+def update_index(temp_git_repo: Path) -> UpdateIndex:
+    """Creates an UpdateIndex instance for testing."""
+    return UpdateIndex(temp_git_repo / ".update_index.json")
 
 
 def test_get_git_status_untracked(temp_git_repo: Path):
@@ -72,7 +79,7 @@ def test_get_git_status_modified(temp_git_repo: Path):
     assert status == "modified"
 
 
-def test_get_file_timestamps(temp_git_repo: Path):
+def test_get_file_timestamps(temp_git_repo: Path, update_index: UpdateIndex):
     """Test retrieving file creation and last modified times from git."""
 
     file_path = temp_git_repo / "test.md"
@@ -93,7 +100,7 @@ def test_get_file_timestamps(temp_git_repo: Path):
 
     git_info = GitInfoProvider(temp_git_repo)
     creation_time = git_info.get_creation_time(file_path)
-    modified_time = git_info.get_last_modified_time(file_path)
+    modified_time = git_info.get_last_modified_time(file_path, update_index)
 
     assert creation_time is not None
     assert modified_time is not None
@@ -105,66 +112,55 @@ def test_get_file_timestamps(temp_git_repo: Path):
     assert creation_time <= modified_time
 
 
-def test_get_file_last_modified_time_uses_filesystem_for_modified_files(
-    temp_git_repo: Path,
+def test_get_last_modified_time_no_content_change(
+    temp_git_repo: Path, update_index: UpdateIndex
 ):
-    """
-    Test that modified files use filesystem timestamp instead of git commit timestamp.
-    This verifies the fix for the bug where modified files were showing old commit timestamps.
-    """
+    """Test that mtime change without content change does not update timestamp."""
     file_path = temp_git_repo / "test.md"
+    file_path.write_text("initial content")
 
-    # Create and commit a file
-    file_path.write_text("initial version")
-    subprocess.run(["git", "add", file_path], cwd=temp_git_repo, check=True)
-    subprocess.run(["git", "commit", "-m", "initial"], cwd=temp_git_repo, check=True)
-
+    # Initial update
     git_info = GitInfoProvider(temp_git_repo)
+    initial_time = git_info.get_last_modified_time(file_path, update_index)
+    assert initial_time is not None
 
-    # Get the commit timestamp
-    commit_time = git_info.get_last_modified_time(file_path)
-    assert commit_time is not None
-
-    # Wait to ensure filesystem timestamp will be different
+    # Wait and touch the file to change mtime without changing content
     time.sleep(2)
+    file_path.touch()
 
-    # Modify the file without committing
-    file_path.write_text("modified version")
-
-    # Re-instantiate the provider to pick up the new file system state
+    # Re-instantiate GitInfoProvider and get time again
     git_info = GitInfoProvider(temp_git_repo)
+    new_time = git_info.get_last_modified_time(file_path, update_index)
+    assert new_time is not None
 
-    # Get the modified time - should now use filesystem timestamp
-    modified_time = git_info.get_last_modified_time(file_path)
-    assert modified_time is not None
-
-    # The key test: modified_time should be different from commit_time
-    # This proves we're using filesystem time, not the old git commit time
+    # The timestamp should NOT have changed
     assert (
-        modified_time != commit_time
-    ), f"Modified file timestamp ({modified_time}) should differ from commit time ({commit_time})"
+        abs(new_time - initial_time) < 1
+    ), "Timestamp should not change if content is the same"
 
-    # The modified time should be reasonably recent (within last few seconds)
-    # Allow for some clock skew, but it should be close to when we modified it
-    time_diff_from_now = abs(time.time() - modified_time)
-    assert time_diff_from_now < 5, (
-        f"Modified timestamp ({modified_time}) should be recent, "
-        f"but differs from current time by {time_diff_from_now} seconds"
-    )
 
-    # Typically it should be newer than commit time (but allow for clock skew)
-    # The important thing is that it's DIFFERENT, proving we're using filesystem time
-    time_diff = modified_time - commit_time
-    # We expect it to be > 2 seconds newer (due to our sleep), but allow for clock variations
-    assert abs(time_diff) > 1, (
-        f"Modified time should be significantly different from commit time. "
-        f"Difference: {time_diff} seconds"
-    )
+def test_get_last_modified_time_with_content_change(
+    temp_git_repo: Path, update_index: UpdateIndex
+):
+    """Test that content change updates the timestamp."""
+    file_path = temp_git_repo / "test.md"
+    file_path.write_text("initial content")
 
-    # Also verify it's not significantly in the future (allow small clock skew)
+    # Initial update
+    git_info = GitInfoProvider(temp_git_repo)
+    initial_time = git_info.get_last_modified_time(file_path, update_index)
+    assert initial_time is not None
+
+    # Wait and change the file content
+    time.sleep(2)
+    file_path.write_text("new content")
+
+    # Re-instantiate GitInfoProvider and get time again
+    git_info = GitInfoProvider(temp_git_repo)
+    new_time = git_info.get_last_modified_time(file_path, update_index)
+    assert new_time is not None
+
+    # The timestamp SHOULD have changed
     assert (
-        modified_time <= time.time() + 1
-    ), f"Modified time {modified_time} should not be significantly in the future"
-
-    # Verify the file is actually marked as modified
-    assert git_info.get_status(file_path) == "modified"
+        new_time > initial_time
+    ), "Timestamp should update when content changes"

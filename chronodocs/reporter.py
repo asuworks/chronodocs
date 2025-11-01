@@ -8,6 +8,7 @@ from urllib.parse import quote
 
 from .config import Config
 from .git_helpers import GitInfoProvider
+from .update_index import UpdateIndex
 
 
 class Reporter:
@@ -17,6 +18,7 @@ class Reporter:
         self.config = config
         self.repo_path = repo_path
         self.phase = phase
+        self.update_index = UpdateIndex(repo_path / ".update_index.json")
 
         # Build ignore patterns, excluding the index files and change_log
         self._ignore_patterns = set(config.ignore_patterns) | {
@@ -110,7 +112,7 @@ class Reporter:
                 created_ts = os.path.getctime(filepath)
             except OSError:
                 created_ts = os.path.getmtime(filepath)
-        updated_ts = git_info.get_last_modified_time(filepath)
+        updated_ts = git_info.get_last_modified_time(filepath, self.update_index)
         if not updated_ts:
             try:
                 updated_ts = os.path.getmtime(filepath)
@@ -159,11 +161,6 @@ class Reporter:
         for info in files_info:
             if group_by == "updated_day":
                 key = info["updated"].strftime("%Y-%m-%d")
-            elif group_by == "updated_day_then_folder":
-                # Nested grouping: day, then folder within each day
-                day_key = info["updated"].strftime("%Y-%m-%d")
-                folder_key = str(info["path"].parent.relative_to(self.repo_path))
-                key = (day_key, folder_key)
             elif group_by == "created_day":
                 key = info["created"].strftime("%Y-%m-%d")
             elif group_by == "folder":
@@ -181,15 +178,6 @@ class Reporter:
         self, grouped: Dict[str, List[Dict]], sort_by: str
     ) -> List[Tuple[str, List[Dict]]]:
         """Sort groups based on the sorting strategy."""
-        # Check if we have nested grouping (tuples as keys)
-        if grouped and isinstance(next(iter(grouped.keys())), tuple):
-            # Nested grouping - sort by day desc (newest first), folder asc (alphabetical)
-            # Use negative day for descending, positive folder for ascending
-            return sorted(
-                grouped.items(),
-                key=lambda item: (-1 * int(item[0][0].replace("-", "")), item[0][1]),
-            )
-
         if sort_by == "updated_desc":
             return sorted(grouped.items(), key=lambda item: item[0], reverse=True)
         elif sort_by == "updated_asc":
@@ -245,54 +233,22 @@ class Reporter:
             "deleted": "🔴 deleted",
         }
 
-        # Check if we have nested grouping
-        has_nested_grouping = sorted_groups and isinstance(sorted_groups[0][0], tuple)
+        for group_key, files in sorted_groups:
+            md += f"## {group_key}\n\n"
+            md += "| File | Status | Created | Updated |\n"
+            md += "| ---- | ------ | --------: | --------: |\n"
 
-        if has_nested_grouping:
-            # Nested grouping: group by day, then by folder
-            from itertools import groupby
+            # Sort files within the group by updated time descending
+            sorted_files = sorted(files, key=lambda f: f["updated"], reverse=True)
 
-            # Group by first element of tuple (day)
-            for day, day_groups in groupby(sorted_groups, key=lambda x: x[0][0]):
-                md += f"## {day}\n\n"
-
-                # Now group by folder within this day
-                for (_, folder), files in day_groups:
-                    md += f"### {folder}\n\n"
-                    md += "| File | Status | Created | Updated |\n"
-                    md += "| ---- | ------ | --------: | --------: |\n"
-
-                    # Sort files within the folder by updated time descending
-                    sorted_files = sorted(
-                        files, key=lambda f: f["updated"], reverse=True
-                    )
-
-                    for info in sorted_files:
-                        relative_path = info["relative_path"]
-                        link_path = self._get_relative_link(info["path"])
-                        status_text = status_map.get(info["status"], info["status"])
-                        created_str = info["created"].strftime("%Y-%m-%d %H:%M:%S")
-                        updated_str = info["updated"].strftime("%Y-%m-%d %H:%M:%S")
-                        md += f"| [`{relative_path}`]({link_path}) | {status_text} | {created_str} | {updated_str} |\n"
-                    md += "\n"
-        else:
-            # Simple grouping
-            for group_key, files in sorted_groups:
-                md += f"## {group_key}\n\n"
-                md += "| File | Status | Created | Updated |\n"
-                md += "| ---- | ------ | --------: | --------: |\n"
-
-                # Sort files within the group by updated time descending
-                sorted_files = sorted(files, key=lambda f: f["updated"], reverse=True)
-
-                for info in sorted_files:
-                    relative_path = info["relative_path"]
-                    link_path = self._get_relative_link(info["path"])
-                    status_text = status_map.get(info["status"], info["status"])
-                    created_str = info["created"].strftime("%Y-%m-%d %H:%M:%S")
-                    updated_str = info["updated"].strftime("%Y-%m-%d %H:%M:%S")
-                    md += f"| [`{relative_path}`]({link_path}) | {status_text} | {created_str} | {updated_str} |\n"
-                md += "\n"
+            for info in sorted_files:
+                relative_path = info["relative_path"]
+                link_path = self._get_relative_link(info["path"])
+                status_text = status_map.get(info["status"], info["status"])
+                created_str = info["created"].strftime("%Y-%m-%d %H:%M:%S")
+                updated_str = info["updated"].strftime("%Y-%m-%d %H:%M:%S")
+                md += f"| [`{relative_path}`]({link_path}) | {status_text} | {created_str} | {updated_str} |\n"
+            md += "\n"
 
         md += "---\n\n"
         md += "### Definitions\n"

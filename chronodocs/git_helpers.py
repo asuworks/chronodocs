@@ -1,6 +1,11 @@
+import datetime
 import subprocess
+from datetime import timezone
 from pathlib import Path
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional
+
+if TYPE_CHECKING:
+    from .update_index import UpdateIndex
 
 
 def _run_git_command(command: list[str], cwd: Path) -> str:
@@ -111,21 +116,48 @@ class GitInfoProvider:
         except ValueError:
             return None
 
-    def get_last_modified_time(self, filepath: Path) -> Optional[float]:
+    def get_last_modified_time(
+        self, filepath: Path, update_index: "UpdateIndex"
+    ) -> Optional[float]:
         """
-        Gets the last modification time, preferring filesystem for new/modified files.
+        Gets the last modification time. If the file is new or modified,
+        it checks if the content has actually changed before updating the timestamp.
         """
         try:
             relative_path = str(filepath.relative_to(self.repo_path))
-            status = self._statuses.get(relative_path)
+            status = self.get_status(filepath)
 
+            # For new or modified files, check if content has changed
             if status in ("modified", "new"):
-                import os
-                try:
-                    return os.path.getmtime(filepath)
-                except OSError:
-                    pass  # Fallback to git time
+                if update_index.has_changed(filepath):
+                    # Content has changed, so update the index and return current time
+                    update_index.update_file(filepath)
+                    update_index.save()
+                    return datetime.datetime.now(timezone.utc).timestamp()
+                else:
+                    # Content is the same, return the last known update time
+                    entry = update_index.get_all_entries().get(str(filepath))
+                    if entry and "last_content_update" in entry:
+                        return datetime.datetime.fromisoformat(
+                            entry["last_content_update"].replace("Z", "+00:00")
+                        ).timestamp()
 
-            return self._modification_times.get(relative_path)
-        except ValueError:
+            # For committed files, return the git modification time
+            git_time = self._modification_times.get(relative_path)
+            if git_time:
+                return git_time
+
+            # Fallback for untracked but unchanged files
+            entry = update_index.get_all_entries().get(str(filepath))
+            if entry and "last_content_update" in entry:
+                return datetime.datetime.fromisoformat(
+                    entry["last_content_update"].replace("Z", "+00:00")
+                ).timestamp()
+
+            # Final fallback to filesystem mtime
+            import os
+
+            return os.path.getmtime(filepath)
+
+        except (ValueError, OSError):
             return None
