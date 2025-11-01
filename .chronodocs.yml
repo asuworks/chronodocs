@@ -19,6 +19,8 @@ ignore_patterns:
     - "__pycache__/"
     - ".creation_index.json"
     - ".update_index.json"
+    - ".creation_index.json.lock"
+    - ".update_index.json.lock"
     - "change_log.md"
     - "*.tmp"
     - ".DS_Store"
@@ -88,7 +90,7 @@ debounce:
 
 # Default report grouping
 report:
-    group_by: "updated_day_then_folder" # updated_day | created_day | folder | status | updated_day_then_folder
+    group_by: "updated_day" # updated_day | created_day | folder | status
     sort_by: "updated_desc" # updated_asc | updated_desc | created_asc | created_desc
     extensions: [] # include all files into report (except for ignore_patterns above)
         # - ".md"
