@@ -32,7 +32,9 @@ class GitInfoProvider:
         self.repo_path = repo_path
         self._statuses: Dict[str, str] = self._fetch_all_statuses()
         self._creation_times: Dict[str, float] = self._fetch_all_creation_times()
-        self._modification_times: Dict[str, float] = self._fetch_all_modification_times()
+        self._modification_times: Dict[str, float] = (
+            self._fetch_all_modification_times()
+        )
 
     def _fetch_all_statuses(self) -> Dict[str, str]:
         """Gets the git status for all files in the repository."""
@@ -68,7 +70,9 @@ class GitInfoProvider:
 
     def _parse_git_log_output(self, output: str) -> Dict[str, float]:
         times = {}
-        commits = output.strip().split("---")[1:]  # Split by --- and remove first empty string
+        commits = output.strip().split("---")[
+            1:
+        ]  # Split by --- and remove first empty string
         for commit in commits:
             lines = commit.strip().split("\n")
             if not lines:
@@ -88,7 +92,13 @@ class GitInfoProvider:
     def _fetch_all_creation_times(self) -> Dict[str, float]:
         """Gets the creation time for all files from their first git commit."""
         output = _run_git_command(
-            ["log", "--reverse", "--diff-filter=A", "--pretty=format:---\n%at", "--name-only"],
+            [
+                "log",
+                "--reverse",
+                "--diff-filter=A",
+                "--pretty=format:---\n%at",
+                "--name-only",
+            ],
             cwd=self.repo_path,
         )
         return self._parse_git_log_output(output)

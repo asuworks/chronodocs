@@ -113,9 +113,7 @@ class PhaseWatcher:
                 # Do not signal completion, as the work is deferred
                 return
 
-            logging.info(
-                f"Reconciling changes in '{self.reconciler.phase_dir}'..."
-            )
+            logging.info(f"Reconciling changes in '{self.reconciler.phase_dir}'...")
             self.reconciler.reconcile()
             self._last_reconcile_time = time.time()
             logging.info("Reconciliation complete.")

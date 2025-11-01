@@ -79,12 +79,8 @@ def test_reconcile_on_startup(temp_phase_dir_for_watcher: Path):
     assert event_was_set, "Reconcile event was not set on startup"
 
     # Check that the file was prefixed
-    assert not (
-        temp_phase_dir_for_watcher / "unprefixed_file.md"
-    ).exists()
-    assert (
-        temp_phase_dir_for_watcher / "00-unprefixed_file.md"
-    ).exists()
+    assert not (temp_phase_dir_for_watcher / "unprefixed_file.md").exists()
+    assert (temp_phase_dir_for_watcher / "00-unprefixed_file.md").exists()
 
     watcher.stop()
     thread.join(timeout=2)

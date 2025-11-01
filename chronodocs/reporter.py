@@ -18,14 +18,6 @@ class Reporter:
         self.config = config
         self.repo_path = repo_path
         self.phase = phase
-        self.update_index = UpdateIndex(repo_path / ".update_index.json")
-
-        # Build ignore patterns, excluding the index files and change_log
-        self._ignore_patterns = set(config.ignore_patterns) | {
-            ".creation_index.json",
-            ".update_index.json",
-            "change_log.md",
-        }
 
         # Calculate phase directory for relative link generation
         self.phase_dir = None
@@ -35,6 +27,21 @@ class Reporter:
             )
             phase_dir_str = phase_dir_template.replace("{phase}", self.phase)
             self.phase_dir = self.repo_path / phase_dir_str
+
+        # Initialize UpdateIndex in phase directory if phase is specified, otherwise repo root
+        update_index_path = (
+            self.phase_dir / ".update_index.json"
+            if self.phase_dir
+            else repo_path / ".update_index.json"
+        )
+        self.update_index = UpdateIndex(update_index_path)
+
+        # Build ignore patterns, excluding the index files and change_log
+        self._ignore_patterns = set(config.ignore_patterns) | {
+            ".creation_index.json",
+            ".update_index.json",
+            "change_log.md",
+        }
 
     def _is_ignored(self, filepath: Path) -> bool:
         """

@@ -197,9 +197,7 @@ def test_throttling_of_reconcile_calls(temp_repo_for_sentinel: Path):
     min_interval = 0.2
     debounce_interval = 0.05
     report_file = (
-        temp_repo_for_sentinel
-        / ".devcontext/progress/test_phase"
-        / "change_log.md"
+        temp_repo_for_sentinel / ".devcontext/progress/test_phase" / "change_log.md"
     )
 
     watcher = RootWatcher(

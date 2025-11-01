@@ -161,6 +161,4 @@ def test_get_last_modified_time_with_content_change(
     assert new_time is not None
 
     # The timestamp SHOULD have changed
-    assert (
-        new_time > initial_time
-    ), "Timestamp should update when content changes"
+    assert new_time > initial_time, "Timestamp should update when content changes"
