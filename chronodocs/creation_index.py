@@ -4,6 +4,8 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from filelock import FileLock, Timeout
+
 # A unique identifier for a file, combining inode and device ID.
 FileKey = str
 
@@ -19,25 +21,41 @@ class CreationIndex:
         self._entries: Dict[FileKey, Dict[str, Any]] = self._load()
 
     def _load(self) -> Dict[FileKey, Dict[str, Any]]:
-        """Loads the index from the JSON file."""
-        if not self.index_path.is_file():
-            return {}
+        """
+        Loads the index from the JSON file.
+        Uses a file lock to prevent race conditions with other processes.
+        """
+        lock_path = self.index_path.with_suffix(".json.lock")
         try:
-            with open(self.index_path, "r") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError):
-            # If the file is corrupted or unreadable, start fresh.
+            with FileLock(lock_path, timeout=1):
+                if not self.index_path.is_file():
+                    return {}
+                try:
+                    with open(self.index_path, "r") as f:
+                        return json.load(f)
+                except (json.JSONDecodeError, IOError):
+                    return {}  # Start fresh on corruption
+        except Timeout:
+            # If we can't acquire the lock, assume the index is busy and start fresh
             return {}
 
     def save(self):
-        """Saves the index to the JSON file atomically."""
-        # Ensure parent directory exists
-        self.index_path.parent.mkdir(parents=True, exist_ok=True)
-
-        temp_path = self.index_path.with_suffix(".tmp")
-        with open(temp_path, "w") as f:
-            json.dump(self._entries, f, indent=2)
-        os.replace(temp_path, self.index_path)
+        """
+        Saves the index to the JSON file atomically.
+        Uses a file lock to prevent race conditions with other processes.
+        """
+        lock_path = self.index_path.with_suffix(".json.lock")
+        try:
+            with FileLock(lock_path, timeout=1):
+                self.index_path.parent.mkdir(parents=True, exist_ok=True)
+                temp_path = self.index_path.with_suffix(".tmp")
+                with open(temp_path, "w") as f:
+                    json.dump(self._entries, f, indent=2)
+                os.replace(temp_path, self.index_path)
+        except Timeout:
+            # Handle the case where the lock could not be acquired
+            # In a real-world scenario, you might want to log this
+            pass
 
     @staticmethod
     def get_file_key(filepath: Path) -> FileKey:

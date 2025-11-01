@@ -1,13 +1,12 @@
 import fnmatch
 import logging
+import os
+import random
 import time
 from pathlib import Path
-from threading import Lock, Timer
+from threading import Event, Lock, Timer
 
-from watchdog.events import (
-    FileSystemEvent,
-    FileSystemEventHandler,
-)
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
 from .config import Config
@@ -21,86 +20,62 @@ logging.basicConfig(
 )
 
 
-class DebouncedReportHandler(FileSystemEventHandler):
-    """
-    An event handler that debounces filesystem events and triggers report generation.
-    It uses pattern matching to ignore irrelevant files and prevent feedback loops.
-    """
+class RootEventHandler(FileSystemEventHandler):
+    """A simple event handler that delegates to the main watcher class."""
+
+    def __init__(self, watcher: "RootWatcher"):
+        super().__init__()
+        self.watcher = watcher
+
+    def on_any_event(self, event: FileSystemEvent):
+        """Catches all non-ignored events and triggers the debounced command."""
+        # Ignore read-only events (opened, closed_no_write)
+        if event.event_type in ("opened", "closed_no_write"):
+            return
+
+        if self.watcher._is_ignored(event):
+            return
+
+        filepath = Path(event.src_path)
+        logging.info(
+            f"→ Root event detected: {filepath.name} (type: {event.event_type})"
+        )
+        self.watcher._request_reconcile()
+
+
+class RootWatcher:
+    """Initializes and runs the file system observer for the root directory."""
 
     def __init__(
         self,
+        repo_path: Path,
         config: Config,
-        repo_root: Path,
         phase: str,
-        debounce_interval_seconds: float,
-        ignore_patterns: list[str],
+        debounce_interval: float = None,
+        min_reconcile_interval: float = None,
+        reconcile_done_event: Event = None,
     ):
-        super().__init__()
+        self.repo_path = repo_path
         self.config = config
-        self.repo_root = repo_root
         self.phase = phase
-        self.debounce_interval = debounce_interval_seconds
-        self.ignore_patterns = ignore_patterns
+        self.observer = Observer()
+        self.reconcile_done_event = reconcile_done_event
+
+        self.debounce_interval = (
+            debounce_interval
+            if debounce_interval is not None
+            else self.config.debounce_root / 1000.0
+        )
+        self.min_reconcile_interval = (
+            min_reconcile_interval
+            if min_reconcile_interval is not None
+            else getattr(self.config, "min_interval_root", 5000) / 1000.0
+        )
+
         self._timer: Timer | None = None
-        self._timer_lock = Lock()  # Protects timer state
-        self._report_lock = Lock()  # Prevents concurrent report generation
-        self._last_report_time = 0.0  # Track last report generation time
-        self._min_report_interval = 5.0  # Minimum seconds between report generations
-
-    def _dispatch_report(self):
-        """Cancels any pending timer and starts a new one."""
-        with self._timer_lock:
-            if self._timer is not None:
-                self._timer.cancel()
-
-            self._timer = Timer(self.debounce_interval, self._run_report)
-            self._timer.start()
-
-    def _run_report(self):
-        """The callback that generates the report."""
-        # Try to acquire the lock; if we can't, another report is running
-        if not self._report_lock.acquire(blocking=False):
-            logging.debug("Report generation is already running, skipping trigger.")
-            return
-
-        try:
-            # Check if enough time has passed since last report generation
-            current_time = time.time()
-            time_since_last = current_time - self._last_report_time
-
-            if time_since_last < self._min_report_interval:
-                logging.debug(
-                    f"Skipping report generation: only {time_since_last:.1f}s since last run "
-                    f"(min interval: {self._min_report_interval}s)"
-                )
-                return
-
-            # Determine output path
-            phase_dir = self.repo_root / self.config.phase_dir_template.format(
-                phase=self.phase
-            )
-            output_path = phase_dir / "change_log.md"
-
-            logging.info(
-                f"Root watcher detected changes. Generating report to '{output_path}'"
-            )
-
-            # Generate report
-            reporter = Reporter(
-                config=self.config, repo_path=self.repo_root, phase=self.phase
-            )
-            markdown_report = reporter.generate_report()
-
-            # Write report
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_text(markdown_report)
-
-            self._last_report_time = time.time()  # Update last report time
-            logging.info(f"Report generated successfully to '{output_path}'")
-        except Exception as e:
-            logging.error(f"Error generating report: {e}", exc_info=True)
-        finally:
-            self._report_lock.release()
+        self._timer_lock = Lock()
+        self._report_lock = Lock()
+        self._last_report_time = 0.0
 
     def _is_ignored(self, event: FileSystemEvent) -> bool:
         """
@@ -113,7 +88,7 @@ class DebouncedReportHandler(FileSystemEventHandler):
         if event.is_directory:
             return True
 
-        for pattern in self.ignore_patterns:
+        for pattern in self.config.ignore_patterns:
             # Check filename match (for patterns like "*.tmp", ".creation_index.json")
             if fnmatch.fnmatch(filepath.name, pattern.strip("/")):
                 logging.debug(
@@ -132,30 +107,72 @@ class DebouncedReportHandler(FileSystemEventHandler):
 
         return False
 
-    def on_any_event(self, event: FileSystemEvent):
-        """Catches all non-ignored events and triggers the debounced command."""
-        # Ignore read-only events (opened, closed_no_write)
-        if event.event_type in ("opened", "closed_no_write"):
+    def _request_reconcile(self):
+        """Cancels any pending timer and starts a new one with a slight jitter."""
+        with self._timer_lock:
+            if self._timer is not None:
+                self._timer.cancel()
+
+            jitter = random.uniform(0, 0.1)  # Reduced jitter
+            interval = self.debounce_interval + jitter
+            self._timer = Timer(interval, self._reconcile_and_report)
+            self._timer.start()
+
+    def _reconcile_and_report(self):
+        """The callback that generates the report."""
+        if not self._report_lock.acquire(blocking=False):
+            logging.debug("Report generation is already running, skipping trigger.")
             return
 
-        if self._is_ignored(event):
-            return
+        try:
+            current_time = time.time()
+            time_since_last = current_time - self._last_report_time
 
-        filepath = Path(event.src_path)
-        logging.info(
-            f"→ Root event detected: {filepath.name} (type: {event.event_type})"
-        )
-        self._dispatch_report()
+            if time_since_last < self.min_reconcile_interval:
+                logging.debug(
+                    f"Skipping report: {time_since_last:.1f}s < {self.min_reconcile_interval}s"
+                )
+                # Reschedule for later if an event came in during the cooldown
+                with self._timer_lock:
+                    if self._timer:
+                        self._timer.cancel()
+                    # Reschedule to run after the cooldown period has passed
+                    delay = self.min_reconcile_interval - time_since_last
+                    self._timer = Timer(delay, self._reconcile_and_report)
+                    self._timer.start()
+                # Do not signal completion, as the work is deferred
+                return
 
+            phase_dir = self.repo_path / self.config.phase_dir_template.format(
+                phase=self.phase
+            )
+            output_path = phase_dir / "change_log.md"
+            logging.info(f"Generating report to '{output_path}'")
 
-class RootWatcher:
-    """Initializes and runs the file system observer for the root directory."""
+            reporter = Reporter(
+                config=self.config, repo_path=self.repo_path, phase=self.phase
+            )
+            markdown_report = reporter.generate_report()
 
-    def __init__(self, repo_path: Path, config: Config, phase: str):
-        self.repo_path = repo_path
-        self.config = config
-        self.phase = phase
-        self.observer = Observer()
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            temp_path = output_path.with_suffix(".md.tmp")
+            temp_path.write_text(markdown_report, encoding="utf-8")
+            os.replace(temp_path, output_path)
+
+            self._last_report_time = time.time()
+            logging.info(f"Report generated successfully to '{output_path}'")
+
+            # Signal that work is done
+            if self.reconcile_done_event:
+                self.reconcile_done_event.set()
+
+        except Exception as e:
+            logging.error(f"Error generating report: {e}", exc_info=True)
+            # Also signal on error so the test doesn't hang
+            if self.reconcile_done_event:
+                self.reconcile_done_event.set()
+        finally:
+            self._report_lock.release()
 
     def run(self):
         """Starts the watcher and blocks until a KeyboardInterrupt."""
@@ -165,36 +182,11 @@ class RootWatcher:
             )
             return
 
-        # Generate initial change log on startup to catch changes made while watcher was stopped
-        logging.info("Generating initial change log...")
-        try:
-            phase_dir = self.repo_path / self.config.phase_dir_template.format(
-                phase=self.phase
-            )
-            output_path = phase_dir / "change_log.md"
+        # Generate initial change log on startup
+        logging.info("Running initial reconciliation and report...")
+        self._reconcile_and_report()
 
-            reporter = Reporter(
-                config=self.config, repo_path=self.repo_path, phase=self.phase
-            )
-            markdown_report = reporter.generate_report()
-
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_text(markdown_report)
-
-            logging.info(f"Initial change log generated at '{output_path}'")
-        except Exception as e:
-            logging.error(f"Error generating initial change log: {e}", exc_info=True)
-
-        debounce_seconds = self.config.debounce_root / 1000.0  # Convert ms to seconds
-
-        event_handler = DebouncedReportHandler(
-            self.config,
-            self.repo_path,
-            self.phase,
-            debounce_seconds,
-            ignore_patterns=self.config.ignore_patterns,
-        )
-
+        event_handler = RootEventHandler(self)
         self.observer.schedule(event_handler, str(self.repo_path), recursive=True)
         self.observer.start()
 
@@ -205,8 +197,8 @@ class RootWatcher:
         logging.info("Press Ctrl+C to stop.")
 
         try:
-            while True:
-                time.sleep(1)
+            while self.observer.is_alive():
+                self.observer.join(1)
         except KeyboardInterrupt:
             logging.info("Shutdown signal received.")
         finally:
@@ -214,6 +206,9 @@ class RootWatcher:
 
     def stop(self):
         """Stops the file system observer."""
+        with self._timer_lock:
+            if self._timer:
+                self._timer.cancel()
         if self.observer.is_alive():
             self.observer.stop()
             self.observer.join()

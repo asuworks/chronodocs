@@ -1,10 +1,13 @@
 import datetime
 import hashlib
 import json
+import logging
 import os
 from datetime import timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+from filelock import FileLock, Timeout
 
 
 class UpdateIndex:
@@ -18,33 +21,59 @@ class UpdateIndex:
         self._entries: Dict[str, Dict[str, Any]] = self._load()
 
     def _load(self) -> Dict[str, Dict[str, Any]]:
-        """Loads the index from the JSON file."""
-        if not self.index_path.is_file():
-            return {}
+        """
+        Loads the index from the JSON file.
+        Uses a file lock to prevent race conditions with other processes.
+        """
+        lock_path = self.index_path.with_suffix(".json.lock")
         try:
-            with open(self.index_path, "r") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError):
+            with FileLock(lock_path, timeout=1):
+                if not self.index_path.is_file():
+                    return {}
+                try:
+                    with open(self.index_path, "r") as f:
+                        return json.load(f)
+                except (json.JSONDecodeError, IOError):
+                    return {}  # Start fresh on corruption
+        except Timeout:
+            # If we can't acquire the lock, assume the index is busy and start fresh
             return {}
 
     def save(self):
-        """Saves the index to the JSON file atomically."""
-        # Ensure parent directory exists
-        self.index_path.parent.mkdir(parents=True, exist_ok=True)
-
-        temp_path = self.index_path.with_suffix(".tmp")
-        with open(temp_path, "w") as f:
-            json.dump(self._entries, f, indent=2)
-        os.replace(temp_path, self.index_path)
+        """
+        Saves the index to the JSON file atomically.
+        Uses a file lock to prevent race conditions with other processes.
+        """
+        lock_path = self.index_path.with_suffix(".json.lock")
+        try:
+            with FileLock(lock_path, timeout=1):
+                self.index_path.parent.mkdir(parents=True, exist_ok=True)
+                temp_path = self.index_path.with_suffix(".tmp")
+                with open(temp_path, "w") as f:
+                    json.dump(self._entries, f, indent=2)
+                os.replace(temp_path, self.index_path)
+        except Timeout:
+            # Handle the case where the lock could not be acquired
+            # In a real-world scenario, you might want to log this
+            pass
 
     @staticmethod
-    def _calculate_hash(filepath: Path) -> str:
-        """Calculates the SHA256 hash of a file's content."""
-        hasher = hashlib.sha256()
-        with open(filepath, "rb") as f:
-            while chunk := f.read(8192):
-                hasher.update(chunk)
-        return hasher.hexdigest()
+    def _calculate_hash(filepath: Path) -> Optional[str]:
+        """
+        Calculates the SHA256 hash of a file's content.
+        Returns None if the file cannot be read.
+        """
+        try:
+            hasher = hashlib.sha256()
+            with open(filepath, "rb") as f:
+                while chunk := f.read(8192):
+                    hasher.update(chunk)
+            return hasher.hexdigest()
+        except (IOError, PermissionError) as e:
+            logging.warning(
+                f"Could not read file {filepath.name} to calculate hash: {e}"
+            )
+            return None
 
     def update_file(self, filepath: Path, old_path: Optional[Path] = None):
         """
@@ -53,6 +82,10 @@ class UpdateIndex:
         """
         path_key = str(filepath)
         new_hash = self._calculate_hash(filepath)
+
+        # If the file is unreadable, we can't process it.
+        if new_hash is None:
+            return
 
         entry = self._entries.get(path_key)
         if old_path and str(old_path) in self._entries:

@@ -1,7 +1,8 @@
 import subprocess
+import threading
 import time
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -37,8 +38,6 @@ ignore_patterns:
     - ".creation_index.json"
     - ".update_index.json"
 
-debounce:
-    root: 100  # ms
 
 report:
     extensions:
@@ -59,240 +58,236 @@ report:
     return repo_path
 
 
-def test_root_watcher_requires_phase(temp_repo_for_sentinel: Path):
-    """Test that RootWatcher requires a phase to be specified."""
+def test_start_and_stop_observer(temp_repo_for_sentinel: Path):
+    """Verify that the observer starts and stops correctly."""
     config = get_config(temp_repo_for_sentinel)
-
-    # Create watcher without phase - should fail when run
-    watcher = RootWatcher(repo_path=temp_repo_for_sentinel, config=config, phase=None)
-
-    # Run should exit with error
-    watcher.run()
-    # The watcher logs an error and returns early, so this should complete quickly
-
-
-def test_root_watcher_generates_report_on_file_change(temp_repo_for_sentinel: Path):
-    """Test that the RootWatcher detects changes and generates a report."""
-    config = get_config(temp_repo_for_sentinel)
-    phase_dir = temp_repo_for_sentinel / ".devcontext" / "progress" / "test_phase"
-    output_file = phase_dir / "change_log.md"
-
     watcher = RootWatcher(
-        repo_path=temp_repo_for_sentinel, config=config, phase="test_phase"
+        repo_path=temp_repo_for_sentinel,
+        config=config,
+        phase="test_phase",
+        debounce_interval=0.01,
+        min_reconcile_interval=0.01,
     )
 
-    # Create a test file before starting watcher
-    test_file = temp_repo_for_sentinel / "src" / "test_source.py"
-    test_file.write_text("# Test source")
-
-    # Run the watcher in a separate thread
-    import threading
-
-    watcher_thread = threading.Thread(target=watcher.run, daemon=True)
-    watcher_thread.start()
-
-    time.sleep(0.2)  # Allow watcher to initialize
-
-    # --- Simulate a file change that should be detected ---
-    new_file = temp_repo_for_sentinel / "src" / "new_source.py"
-    new_file.write_text("# New source")
-
-    # Wait for debounce to expire and report to generate
-    time.sleep(0.5)
-
-    # The report should have been generated
-    assert output_file.exists()
-    content = output_file.read_text()
-    assert "# Project Change Log" in content
-    assert "new_source.py" in content or "test_source.py" in content
-
-    # --- Cleanup ---
+    thread = threading.Thread(target=watcher.run, daemon=True)
+    thread.start()
+    time.sleep(0.1)  # Give it a moment to start the observer
+    assert watcher.observer.is_alive()
     watcher.stop()
-    watcher_thread.join(timeout=1)
+    thread.join(timeout=2)
+    assert not watcher.observer.is_alive()
+    assert not thread.is_alive()
 
 
-def test_root_watcher_ignores_change_log(temp_repo_for_sentinel: Path):
-    """Test that the RootWatcher ignores its own change_log.md file."""
+def test_reconcile_on_startup(temp_repo_for_sentinel: Path):
+    """Test that reconcile is called on startup."""
     config = get_config(temp_repo_for_sentinel)
-    phase_dir = temp_repo_for_sentinel / ".devcontext" / "progress" / "test_phase"
-    output_file = phase_dir / "change_log.md"
+    reconcile_done_event = threading.Event()
+
+    # Create a file before starting the watcher
+    (temp_repo_for_sentinel / "existing_file.md").write_text("hello")
 
     watcher = RootWatcher(
-        repo_path=temp_repo_for_sentinel, config=config, phase="test_phase"
+        repo_path=temp_repo_for_sentinel,
+        config=config,
+        phase="test_phase",
+        debounce_interval=0.01,
+        min_reconcile_interval=0.01,
+        reconcile_done_event=reconcile_done_event,
     )
 
-    # Mock the reporter to track calls
-    with patch("chronodocs.watcher_root.Reporter") as MockReporter:
-        mock_reporter_instance = MagicMock()
-        MockReporter.return_value = mock_reporter_instance
-        mock_reporter_instance.generate_report.return_value = "# Test Report"
+    with patch.object(
+        watcher, "_reconcile_and_report", wraps=watcher._reconcile_and_report
+    ) as mock_reconcile:
+        thread = threading.Thread(target=watcher.run, daemon=True)
+        thread.start()
 
-        # Run the watcher in a separate thread
-        import threading
+        # Wait for the initial reconcile to complete
+        event_was_set = reconcile_done_event.wait(timeout=2)
+        assert event_was_set, "Reconcile event was not set on startup"
 
-        watcher_thread = threading.Thread(target=watcher.run, daemon=True)
-        watcher_thread.start()
+        mock_reconcile.assert_called_once()
 
-        time.sleep(0.2)  # Allow watcher to initialize
-
-        # Reset mock to ignore initialization
-        MockReporter.reset_mock()
-        mock_reporter_instance.reset_mock()
-
-        # Create change_log.md (should be ignored)
-        output_file.parent.mkdir(parents=True, exist_ok=True)
-        output_file.write_text("# Should be ignored")
-
-        # Wait
-        time.sleep(0.3)
-
-        # Reporter should NOT have been called
-        assert MockReporter.call_count == 0
-
-        # Now create a regular file (should trigger)
-        regular_file = temp_repo_for_sentinel / "regular.md"
-        regular_file.write_text("# Regular file")
-
-        # Wait for debounce and processing
-        time.sleep(0.5)
-
-        # Reporter should have been called now
-        assert MockReporter.call_count >= 1
-
-        # --- Cleanup ---
         watcher.stop()
-        watcher_thread.join(timeout=1)
+        thread.join(timeout=2)
 
 
-def test_root_watcher_ignores_git_directory(temp_repo_for_sentinel: Path):
-    """Test that the RootWatcher ignores files in .git directory."""
+def test_report_generation_on_startup(temp_repo_for_sentinel: Path):
+    """Test that a report is generated on startup if files exist."""
     config = get_config(temp_repo_for_sentinel)
+    reconcile_done_event = threading.Event()
+    phase_dir = temp_repo_for_sentinel / ".devcontext/progress/test_phase"
+    report_file = phase_dir / "change_log.md"
+
+    # Create a file before starting the watcher
+    (temp_repo_for_sentinel / "existing_file.md").write_text("hello")
+
+    assert not report_file.exists()
 
     watcher = RootWatcher(
-        repo_path=temp_repo_for_sentinel, config=config, phase="test_phase"
+        repo_path=temp_repo_for_sentinel,
+        config=config,
+        phase="test_phase",
+        debounce_interval=0.01,
+        min_reconcile_interval=0.01,
+        reconcile_done_event=reconcile_done_event,
     )
 
-    # Mock the reporter to track calls
-    with patch("chronodocs.watcher_root.Reporter") as MockReporter:
-        mock_reporter_instance = MagicMock()
-        MockReporter.return_value = mock_reporter_instance
-        mock_reporter_instance.generate_report.return_value = "# Test Report"
+    thread = threading.Thread(target=watcher.run, daemon=True)
+    thread.start()
 
-        # Run the watcher in a separate thread
-        import threading
+    event_was_set = reconcile_done_event.wait(timeout=2)
+    assert event_was_set, "Reconcile event was not set on startup"
 
-        watcher_thread = threading.Thread(target=watcher.run, daemon=True)
-        watcher_thread.start()
+    assert report_file.exists()
+    content = report_file.read_text()
+    assert "existing_file.md" in content
 
-        time.sleep(0.2)  # Allow watcher to initialize
-
-        # Reset mock to ignore initialization
-        MockReporter.reset_mock()
-
-        # Create file in .git directory (should be ignored)
-        git_file = temp_repo_for_sentinel / ".git" / "test_file"
-        git_file.write_text("Git file")
-
-        # Wait
-        time.sleep(0.3)
-
-        # Reporter should NOT have been called
-        assert MockReporter.call_count == 0
-
-        # --- Cleanup ---
-        watcher.stop()
-        watcher_thread.join(timeout=1)
-
-
-def test_root_watcher_respects_minimum_interval(temp_repo_for_sentinel: Path):
-    """Test that the RootWatcher respects the minimum interval between reports."""
-    config = get_config(temp_repo_for_sentinel)
-
-    watcher = RootWatcher(
-        repo_path=temp_repo_for_sentinel, config=config, phase="test_phase"
-    )
-
-    # Mock the reporter to track calls
-    with patch("chronodocs.watcher_root.Reporter") as MockReporter:
-        mock_reporter_instance = MagicMock()
-        MockReporter.return_value = mock_reporter_instance
-        mock_reporter_instance.generate_report.return_value = "# Test Report"
-
-        # Run the watcher in a separate thread
-        import threading
-
-        watcher_thread = threading.Thread(target=watcher.run, daemon=True)
-        watcher_thread.start()
-
-        time.sleep(0.2)  # Allow watcher to initialize
-
-        # Reset mock
-        MockReporter.reset_mock()
-
-        # Create first file
-        file1 = temp_repo_for_sentinel / "file1.md"
-        file1.write_text("First file")
-
-        # Wait for debounce and processing
-        time.sleep(0.5)
-
-        # Should have been called once
-        first_call_count = MockReporter.call_count
-        assert first_call_count >= 1
-
-        # Immediately create second file (should be throttled by 5-second minimum)
-        file2 = temp_repo_for_sentinel / "file2.md"
-        file2.write_text("Second file")
-
-        # Wait for debounce but not full 5 seconds
-        time.sleep(0.5)
-
-        # Should NOT have been called again (minimum interval not passed)
-        assert MockReporter.call_count == first_call_count
-
-        # --- Cleanup ---
-        watcher.stop()
-        watcher_thread.join(timeout=1)
-
-
-def test_root_watcher_includes_files_from_all_watch_paths(temp_repo_for_sentinel: Path):
-    """Test that the generated report includes files from all watch paths."""
-    config = get_config(temp_repo_for_sentinel)
-    phase_dir = temp_repo_for_sentinel / ".devcontext" / "progress" / "test_phase"
-    output_file = phase_dir / "change_log.md"
-
-    # Create files in different locations
-    (temp_repo_for_sentinel / "root_file.md").write_text("Root file")
-    (temp_repo_for_sentinel / "src" / "code.py").write_text("# Code")
-    phase_file = phase_dir / "phase_file.md"
-    phase_file.write_text("Phase file")
-
-    watcher = RootWatcher(
-        repo_path=temp_repo_for_sentinel, config=config, phase="test_phase"
-    )
-
-    # Run the watcher in a separate thread
-    import threading
-
-    watcher_thread = threading.Thread(target=watcher.run, daemon=True)
-    watcher_thread.start()
-
-    time.sleep(0.2)  # Allow watcher to initialize
-
-    # Trigger a change
-    trigger_file = temp_repo_for_sentinel / "trigger.md"
-    trigger_file.write_text("Trigger change")
-
-    # Wait for report generation
-    time.sleep(0.5)
-
-    # Check report includes all files
-    assert output_file.exists()
-    content = output_file.read_text()
-    assert "root_file.md" in content
-    assert "code.py" in content
-    assert "phase_file.md" in content
-
-    # --- Cleanup ---
     watcher.stop()
-    watcher_thread.join(timeout=1)
+    thread.join(timeout=2)
+
+
+def test_event_handling_and_report_generation(temp_repo_for_sentinel: Path):
+    """Test that file events trigger reconcile and report generation."""
+    config = get_config(temp_repo_for_sentinel)
+    reconcile_done_event = threading.Event()
+    phase_dir = temp_repo_for_sentinel / ".devcontext/progress/test_phase"
+    report_file = phase_dir / "change_log.md"
+    min_interval = 0.05  # Use a slightly larger, more realistic interval
+
+    watcher = RootWatcher(
+        repo_path=temp_repo_for_sentinel,
+        config=config,
+        phase="test_phase",
+        debounce_interval=0.01,
+        min_reconcile_interval=min_interval,
+        reconcile_done_event=reconcile_done_event,
+    )
+
+    thread = threading.Thread(target=watcher.run, daemon=True)
+    thread.start()
+
+    # Wait for the initial startup reconcile to finish
+    event_was_set = reconcile_done_event.wait(timeout=2)
+    assert event_was_set, "Initial reconcile event was not set"
+    reconcile_done_event.clear()  # Reset for the next event
+
+    # Wait for the cooldown period to pass to avoid throttling
+    time.sleep(min_interval)
+
+    # Now, create a new file
+    (temp_repo_for_sentinel / "new_file.md").write_text("new content")
+
+    # Wait for the event-triggered reconcile to finish
+    event_was_set = reconcile_done_event.wait(timeout=2)
+    assert event_was_set, "Event-triggered reconcile event was not set"
+
+    assert report_file.exists()
+    content = report_file.read_text()
+    assert "new_file.md" in content
+
+    watcher.stop()
+    thread.join(timeout=2)
+
+
+def test_throttling_of_reconcile_calls(temp_repo_for_sentinel: Path):
+    """Test that rapid events are debounced and throttled."""
+    config = get_config(temp_repo_for_sentinel)
+    reconcile_done_event = threading.Event()
+    min_interval = 0.2
+    debounce_interval = 0.05
+    report_file = (
+        temp_repo_for_sentinel
+        / ".devcontext/progress/test_phase"
+        / "change_log.md"
+    )
+
+    watcher = RootWatcher(
+        repo_path=temp_repo_for_sentinel,
+        config=config,
+        phase="test_phase",
+        debounce_interval=debounce_interval,
+        min_reconcile_interval=min_interval,
+        reconcile_done_event=reconcile_done_event,
+    )
+
+    thread = threading.Thread(target=watcher.run, daemon=True)
+    thread.start()
+
+    # 1. Wait for startup reconcile
+    assert reconcile_done_event.wait(timeout=2)
+    reconcile_done_event.clear()
+    initial_content = report_file.read_text() if report_file.exists() else ""
+
+    # 2. Trigger a successful event after cooldown
+    time.sleep(min_interval)
+    (temp_repo_for_sentinel / "file1.md").write_text("1")
+    assert reconcile_done_event.wait(timeout=2)
+    content_after_first_event = report_file.read_text()
+    assert "file1.md" in content_after_first_event
+    assert content_after_first_event != initial_content
+    reconcile_done_event.clear()
+
+    # 3. Trigger an immediate event that should be throttled
+    (temp_repo_for_sentinel / "file2.md").write_text("2")
+
+    # Wait for the debounce timer to fire the throttled call
+    time.sleep(debounce_interval + 0.05)
+    # Assert that the event is NOT set, because the call was throttled
+    assert not reconcile_done_event.is_set()
+    # And the report has not been updated
+    assert report_file.read_text() == content_after_first_event
+
+    # 4. Wait for the rescheduled call to complete
+    assert reconcile_done_event.wait(timeout=2)
+    # Check that the report from the throttled event has now been generated
+    content_after_throttled_event = report_file.read_text()
+    assert "file2.md" in content_after_throttled_event
+    assert content_after_throttled_event != content_after_first_event
+
+    watcher.stop()
+    thread.join(timeout=2)
+
+
+def test_ignore_patterns_are_respected(temp_repo_for_sentinel: Path):
+    """Test that ignored files do not trigger a reconcile."""
+    config = get_config(temp_repo_for_sentinel)
+    reconcile_done_event = threading.Event()
+
+    watcher = RootWatcher(
+        repo_path=temp_repo_for_sentinel,
+        config=config,
+        phase="test_phase",
+        debounce_interval=0.01,
+        min_reconcile_interval=0.01,
+        reconcile_done_event=reconcile_done_event,
+    )
+
+    with patch.object(
+        watcher, "_reconcile_and_report", wraps=watcher._reconcile_and_report
+    ) as mock_reconcile:
+        thread = threading.Thread(target=watcher.run, daemon=True)
+        thread.start()
+
+        # Wait for startup reconcile
+        assert reconcile_done_event.wait(timeout=2)
+        mock_reconcile.assert_called_once()
+        reconcile_done_event.clear()
+
+        # Create an ignored file
+        (temp_repo_for_sentinel / ".git" / "some_git_file").write_text("ignored")
+
+        # Wait a bit to see if it triggers
+        event_was_set = reconcile_done_event.wait(timeout=0.2)
+        assert not event_was_set, "Reconcile was triggered for an ignored file"
+        assert mock_reconcile.call_count == 1
+
+        # Now create a file that is NOT ignored
+        (temp_repo_for_sentinel / "not_ignored.md").write_text("triggers")
+
+        event_was_set = reconcile_done_event.wait(timeout=2)
+        assert event_was_set
+        assert mock_reconcile.call_count == 2
+
+        watcher.stop()
+        thread.join(timeout=2)
