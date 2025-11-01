@@ -162,3 +162,24 @@ def test_get_last_modified_time_with_content_change(
 
     # The timestamp SHOULD have changed
     assert new_time > initial_time, "Timestamp should update when content changes"
+
+
+def test_get_last_modified_time_returns_mtime(
+    temp_git_repo: Path, update_index: UpdateIndex
+):
+    """Test that get_last_modified_time returns the file's mtime."""
+    file_path = temp_git_repo / "test.md"
+    file_path.write_text("initial content")
+
+    # Wait and change the file content
+    time.sleep(2)
+    file_path.write_text("new content")
+    expected_mtime = file_path.stat().st_mtime
+
+    # Re-instantiate GitInfoProvider and get time again
+    git_info = GitInfoProvider(temp_git_repo)
+    new_time = git_info.get_last_modified_time(file_path, update_index)
+    assert new_time is not None
+
+    # The timestamp should be the mtime
+    assert abs(new_time - expected_mtime) < 1
