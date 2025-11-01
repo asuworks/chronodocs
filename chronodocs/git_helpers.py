@@ -1,4 +1,5 @@
 import datetime
+import os
 import subprocess
 from datetime import timezone
 from pathlib import Path
@@ -138,13 +139,13 @@ class GitInfoProvider:
             relative_path = str(filepath.relative_to(self.repo_path))
             status = self.get_status(filepath)
 
-            # For new or modified files, check if content has changed
-            if status in ("modified", "new"):
+            # For new, modified or staged files, check if content has changed
+            if status in ("modified", "new", "staged"):
                 if update_index.has_changed(filepath):
-                    # Content has changed, so update the index and return current time
+                    # Content has changed, so update the index and return mtime
                     update_index.update_file(filepath)
                     update_index.save()
-                    return datetime.datetime.now(timezone.utc).timestamp()
+                    return os.path.getmtime(filepath)
                 else:
                     # Content is the same, return the last known update time
                     entry = update_index.get_all_entries().get(str(filepath))
@@ -166,8 +167,6 @@ class GitInfoProvider:
                 ).timestamp()
 
             # Final fallback to filesystem mtime
-            import os
-
             return os.path.getmtime(filepath)
 
         except (ValueError, OSError):
