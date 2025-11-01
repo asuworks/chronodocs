@@ -38,7 +38,9 @@ class GitInfoProvider:
 
     def _fetch_all_statuses(self) -> Dict[str, str]:
         """Gets the git status for all files in the repository."""
-        output = _run_git_command(["status", "--porcelain", "-z"], cwd=self.repo_path)
+        output = _run_git_command(
+            ["status", "--porcelain", "-z", "--untracked-files=all"], cwd=self.repo_path
+        )
         if not output:
             return {}
 
@@ -55,16 +57,15 @@ class GitInfoProvider:
 
             index_status, worktree_status = status_codes[0], status_codes[1]
             status = "committed"
-            if index_status == "A" or worktree_status == "?":
+
+            if worktree_status == "?":
                 status = "new"
             elif worktree_status == "M":
                 status = "modified"
-            elif index_status == "M":
+            elif index_status in ("A", "M", "R"):
                 status = "staged"
             elif index_status == "D":
                 status = "deleted"
-            elif index_status == "R":
-                status = "staged"
             statuses[filepath] = status
         return statuses
 
