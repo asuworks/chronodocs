@@ -128,6 +128,12 @@ def test_cli_report_scans_all_files(temp_repo_for_cli: Path):
     docs_dir.mkdir()
     (docs_dir / "guide.md").write_text("# Guide")
 
+    # Commit one of the files
+    subprocess.run(["git", "add", "readme.md"], cwd=repo_root, check=True)
+    subprocess.run(
+        ["git", "commit", "-m", "add readme"], cwd=repo_root, check=True
+    )
+
     with patch(
         "sys.argv",
         [
@@ -144,8 +150,9 @@ def test_cli_report_scans_all_files(temp_repo_for_cli: Path):
     content = output_file.read_text()
     assert "code.py" in content
     assert "guide.md" in content
-    assert "doc1.md" in content  # phase files
-    assert "readme.md" in content  # root files
+    assert "doc1.md" in content
+    assert "readme.md" not in content  # Committed, should be excluded
+    assert "**Total files:** 4" in content
 
 
 def test_cli_reconcile_command(temp_repo_for_cli: Path, capsys):

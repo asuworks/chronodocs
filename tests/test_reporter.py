@@ -77,16 +77,23 @@ def test_generate_report_scans_all_files(temp_repo_with_config: Path):
 
     # --- Assertions ---
     assert "# Project Change Log" in report
-    assert "**Total files:** 3" in report
+    assert "**Total files:** 2" in report
 
     # Check all files are included
-    assert "root_doc.md" in report
+    assert "root_doc.md" not in report  # Committed, should be excluded
     assert "phase_doc.md" in report
     assert "code.py" in report
 
     # Check git statuses
-    assert "⚪ committed" in report  # root_file is committed
-    assert "🟢 new" in report  # other files are new
+    report_lines = report.split('\n')
+    table_lines = [line for line in report_lines if line.startswith("|")]
+    table_content = "\n".join(table_lines)
+    assert "root_doc.md" not in table_content # Committed, should be excluded
+
+    phase_line = [line for line in table_lines if "phase_doc.md" in line][0]
+    assert "🟢 new" in phase_line
+    code_line = [line for line in table_lines if "code.py" in line][0]
+    assert "🟢 new" in code_line
 
 
 def test_generate_report_respects_ignore_patterns(temp_repo_with_config: Path):
@@ -188,15 +195,23 @@ def test_generate_report_with_git_statuses(temp_repo_with_config: Path):
     report = reporter.generate_report()
 
     # --- Assertions ---
-    assert "committed.md" in report
+    assert "committed.md" not in report  # Committed files are excluded
     assert "modified.md" in report
     assert "new.md" in report
     assert "staged.md" in report
 
     # Check status indicators
-    assert "⚪ committed" in report
-    assert "🟡 modified" in report
-    assert "🟢 new" in report
+    report_lines = report.split('\n')
+    table_lines = [line for line in report_lines if line.startswith("|")]
+    table_content = "\n".join(table_lines)
+    assert "committed.md" not in table_content
+
+    modified_line = [line for line in table_lines if "modified.md" in line][0]
+    assert "🟡 modified" in modified_line
+    new_line = [line for line in table_lines if "new.md" in line][0]
+    assert "🟢 new" in new_line
+    staged_line = [line for line in table_lines if "staged.md" in line][0]
+    assert "🔵 staged" in staged_line
 
 
 def test_generate_report_empty_project(temp_repo_with_config: Path):
@@ -211,7 +226,7 @@ def test_generate_report_empty_project(temp_repo_with_config: Path):
     report = reporter.generate_report()
 
     # --- Assertions ---
-    assert "No files found" in report or "**Total files:** 0" in report
+    assert "No staged, unstaged, or untracked files found." in report
 
 
 def test_generate_report_includes_phase_name_when_provided(temp_repo_with_config: Path):

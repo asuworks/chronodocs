@@ -136,10 +136,8 @@ class Reporter:
     def generate_report(self) -> str:
         """Generates the full Markdown report."""
         all_files = self._collect_files()
-        if not all_files:
-            return "# Change Log\n\nNo files found matching the watch paths and extensions."
-
         git_info = GitInfoProvider(self.repo_path)
+
         all_files_info = []
         for filepath in all_files:
             try:
@@ -149,15 +147,23 @@ class Reporter:
                 print(f"Warning: Could not process {filepath}: {e}")
                 continue
 
+        # Filter for changed files only
+        changed_files_info = [
+            info for info in all_files_info if info["status"] != "committed"
+        ]
+
+        if not changed_files_info:
+            return "# Change Log\n\nNo staged, unstaged, or untracked files found."
+
         # Grouping based on config (default: by updated day)
         group_by = self.config.report_group_by or "updated_day"
-        grouped_files = self._group_files(all_files_info, group_by)
+        grouped_files = self._group_files(changed_files_info, group_by)
 
         # Sorting groups
         sort_by = self.config.report_sort_by or "updated_desc"
         sorted_groups = self._sort_groups(grouped_files, sort_by)
 
-        return self._render_markdown(sorted_groups, len(all_files_info))
+        return self._render_markdown(sorted_groups, len(changed_files_info))
 
     def _group_files(
         self, files_info: List[Dict], group_by: str

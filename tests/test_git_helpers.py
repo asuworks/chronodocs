@@ -47,7 +47,7 @@ def test_get_git_status_staged(temp_git_repo: Path):
     subprocess.run(["git", "add", staged_file], cwd=temp_git_repo, check=True)
     git_info = GitInfoProvider(temp_git_repo)
     status = git_info.get_status(staged_file)
-    assert status == "new"
+    assert status == "staged"
 
 
 def test_get_git_status_committed(temp_git_repo: Path):
