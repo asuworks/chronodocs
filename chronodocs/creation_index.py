@@ -77,7 +77,11 @@ class CreationIndex:
             return  # Already indexed
 
         if recorded_ctime is None:
-            recorded_ctime = time.time()
+            try:
+                recorded_ctime = os.path.getctime(filepath)
+            except OSError:
+                # Fallback to current time if we can't get ctime
+                recorded_ctime = time.time()
 
         entry = {
             "key": key,

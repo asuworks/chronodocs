@@ -1,7 +1,6 @@
 import datetime
 import os
 import subprocess
-from datetime import timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Optional
 
@@ -12,8 +11,10 @@ if TYPE_CHECKING:
 def _run_git_command(command: list[str], cwd: Path) -> str:
     """Runs a Git command and returns its stdout."""
     try:
+        # -c color.ui=false ensures we get raw text without ANSI codes
+        full_cmd = ["git", "-c", "color.ui=false"] + command
         result = subprocess.run(
-            ["git"] + command,
+            full_cmd,
             capture_output=True,
             text=True,
             check=True,
@@ -171,3 +172,32 @@ class GitInfoProvider:
 
         except (ValueError, OSError):
             return None
+
+    def get_diff_for_file(self, filepath: Path) -> str:
+        """
+        Generates a git diff for the given file.
+        - For modified/staged files: diff against HEAD.
+        - For untracked/new files: diff against /dev/null (shows full content as addition).
+        """
+        try:
+            # We must run this relative to repo root for git to understand the path properly
+            # if we are using relative paths in commands
+            rel_path = filepath.relative_to(self.repo_path)
+
+            # Check status to decide diff strategy
+            status = self._statuses.get(str(rel_path), "committed")
+
+            if status == "new":
+                # Untracked file: use --no-index to compare /dev/null with current file
+                # This makes it look like a pure addition in diff format
+                return _run_git_command(
+                    ["diff", "--no-index", "/dev/null", str(rel_path)],
+                    cwd=self.repo_path,
+                )
+            else:
+                # Tracked (Modified, Staged, Committed): diff against HEAD
+                return _run_git_command(
+                    ["diff", "HEAD", "--", str(rel_path)], cwd=self.repo_path
+                )
+        except (ValueError, Exception):
+            return ""

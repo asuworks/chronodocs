@@ -60,6 +60,7 @@ class RootWatcher:
         self.phase = phase
         self.observer = Observer()
         self.reconcile_done_event = reconcile_done_event
+        self.webserver_callback = None  # Function to call with new data
 
         self.debounce_interval = (
             debounce_interval
@@ -161,6 +162,14 @@ class RootWatcher:
 
             self._last_report_time = time.time()
             logging.info(f"Report generated successfully to '{output_path}'")
+
+            # Notify webserver if attached
+            if self.webserver_callback:
+                try:
+                    structured_data = reporter.get_structured_data()
+                    self.webserver_callback(structured_data)
+                except Exception as e:
+                    logging.error(f"Error notifying webserver: {e}")
 
             # Signal that work is done
             if self.reconcile_done_event:

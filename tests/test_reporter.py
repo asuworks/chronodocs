@@ -85,10 +85,10 @@ def test_generate_report_scans_all_files(temp_repo_with_config: Path):
     assert "code.py" in report
 
     # Check git statuses
-    report_lines = report.split('\n')
+    report_lines = report.split("\n")
     table_lines = [line for line in report_lines if line.startswith("|")]
     table_content = "\n".join(table_lines)
-    assert "root_doc.md" not in table_content # Committed, should be excluded
+    assert "root_doc.md" not in table_content  # Committed, should be excluded
 
     phase_line = [line for line in table_lines if "phase_doc.md" in line][0]
     assert "🟢 new" in phase_line
@@ -201,7 +201,7 @@ def test_generate_report_with_git_statuses(temp_repo_with_config: Path):
     assert "staged.md" in report
 
     # Check status indicators
-    report_lines = report.split('\n')
+    report_lines = report.split("\n")
     table_lines = [line for line in report_lines if line.startswith("|")]
     table_content = "\n".join(table_lines)
     assert "committed.md" not in table_content

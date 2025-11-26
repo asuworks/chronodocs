@@ -22,16 +22,11 @@ When working with AI assistants (Claude, Cursor, Windsurf, etc.), your docs fold
 - 🕰️ **Auto-numbering** files (`00-`, `01-`, `02-`, etc.)
 - 🔍 **Hash-based change tracking** — detects real edits, not just timestamp noise
 - 🧾 **Auto-generated changelogs** — with git status integration
+- 📊 **Live Web Dashboard** — monitor file changes in real-time
 - 🧘 **Fully autonomous** — runs in the background, no manual cleanup required
 
-Perfect for: **AI pair programming**, **agent-generated documentation**, **sprint histories**, and **autonomous development workflows**.
-
 ---
-
-## ⚠️ Disclaimer
-
-**Partially vibe-coded!**
-`chronodocs` is co-developed with AI tools. I am using it daily and will do my best fixing bugs along the way. PRs welcome.
+![chronodocs screenshot](/assets/image.png)
 
 ## ⚙️ Installation
 
@@ -50,23 +45,21 @@ pip install git+https://github.com/asuworks/chrono-docs
 ## 🚀 Quick Start
 
 1. **Create a config file** (`.chronodocs.yml`) in your project root:
-
-```yaml
-phase_dir_template: ".devcontext/progress/{phase}"
-watch_paths: ["."]
-ignore_patterns: [".git/", "node_modules/", ".venv/"]
+```bash
+cp example.chronodocs.yml .chronodocs.yml
 ```
 
 2. **Start the watcher** for your current phase:
 
 ```bash
-chronodocs start --phase feature-development
+chronodocs start --phase feature-development --web
 ```
 
-This spins up two watchers:
+This spins up:
 
 - 🧩 **Phase watcher:** keeps your `.devcontext/progress/{phase}/` folder tidy
 - 👀 **Sentinel watcher:** tracks the whole repo and logs changes to `change_log.md`
+- 📊 **Live Dashboard:** real-time view of file changes at `http://localhost:8888`
 
 3. **Add files** to your phase directory:
 
@@ -89,8 +82,11 @@ chronodocs instantly renames them:
 ### Common Commands
 
 ```bash
-# Start both watchers (recommended for active development)
-chronodocs start --phase my-phase
+# Start watchers with live web dashboard (default port 8888)
+chronodocs start --phase my-phase --web
+
+# Start on a specific port
+chronodocs start --phase my-phase --web --port 3000
 
 # One-time cleanup (no watching)
 chronodocs reconcile --phase my-phase
@@ -121,9 +117,9 @@ Want to see `chronodocs` in action? Use the included simulation script to watch 
 1. **Start the watcher** in one terminal:
 
 ```bash
-chronodocs start --phase test-demo
+chronodocs start --phase test-demo --web
 ```
-This will initialize the `chronodocs` phase folder in `.devcontext/test-demo`
+This will initialize the `chronodocs` phase folder in `.devcontext/test-demo` and open the dashboard at `http://localhost:8888`.
 
 2. **Run the simulation** in another terminal:
 
@@ -143,7 +139,7 @@ The script simulates typical "AI agent chaos":
 
 ### Expected Results
 
-Watch the phase directory transform in real-time:
+Watch the web dashboard or phase directory transform in real-time:
 
 ```
 Before:

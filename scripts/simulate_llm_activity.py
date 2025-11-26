@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-simulate_llm_agent_for_docs_watcher.py
+simulate_llm_activity.py
 
 A small script that simulates an LLM agent adding/renaming files in the current phase folder so you can observe docs_watcher behavior.
 
 Usage:
-    python ./.devcontext/scripts/simulate_llm_agent_for_docs_watcher.py
+    python ./.devcontext/scripts/simulate_llm_activity.py
 """
 
-import time
-from pathlib import Path
-import uuid
 import logging
+import time
+import uuid
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 

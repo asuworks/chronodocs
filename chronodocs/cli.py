@@ -214,6 +214,23 @@ def main():
     start_parser.add_argument(
         "--repo-root", type=Path, default=Path("."), help="The root of the repository."
     )
+    start_parser.add_argument(
+        "--web",
+        action="store_true",
+        help="Start the web log viewer alongside the watchers.",
+    )
+    start_parser.add_argument(
+        "--port",
+        type=int,
+        default=8888,
+        help="Port to run the web server on (default: 8888).",
+    )
+    start_parser.add_argument(
+        "--host",
+        type=str,
+        default="127.0.0.1",
+        help="Host to run the web server on (default: 127.0.0.1).",
+    )
 
     try:
         args = parser.parse_args()
@@ -343,6 +360,52 @@ def main():
                 phase_thread = threading.Thread(target=phase_watcher.run, daemon=True)
                 phase_thread.start()
 
+                # Start webserver if requested
+                if args.web:
+                    # Create a separate reporter for the webserver
+                    # We pass the same config and repo_root
+                    web_reporter = Reporter(
+                        config=config, repo_path=args.repo_root, phase=args.phase
+                    )
+
+                    # Start webserver (it starts its own thread for serving)
+                    # Note: start_webserver usually starts the watcher in a background thread too.
+                    # But here we already have a sentinel_watcher that we want to run in the main thread.
+                    # We need to attach the webserver callback to the sentinel_watcher.
+
+                    # Initialize the server but don't start the watcher loop inside start_webserver
+                    # We need to refactor start_webserver slightly or just use the parts we need.
+
+                    # Let's use the start_webserver function but we need to be careful about threads.
+                    # start_webserver takes a watcher and starts it in a thread.
+                    # Here we want sentinel_watcher to run in the main thread.
+
+                    # Workaround: We can't use start_webserver as is because it assumes it owns the watcher.
+                    # We'll manually setup the server and callback.
+
+                    from .webserver import ChangeLogHandler, ThreadedHTTPServer
+
+                    ChangeLogHandler.reporter = web_reporter
+                    server = ThreadedHTTPServer(
+                        (args.host, args.port), ChangeLogHandler
+                    )
+
+                    def broadcast_update(data):
+                        event = {"type": "update", "files": data}
+                        for q in server.subscribers:
+                            q.put(event)
+
+                    sentinel_watcher.webserver_callback = broadcast_update
+
+                    server_thread = threading.Thread(
+                        target=server.serve_forever, daemon=True
+                    )
+                    server_thread.start()
+
+                    print_info(
+                        f"🌐 Web log viewer running at http://{args.host}:{args.port}"
+                    )
+
                 # Run sentinel watcher in the main thread (so Ctrl+C works properly)
                 try:
                     sentinel_watcher.run()
@@ -351,6 +414,9 @@ def main():
                     print_info("Stopping all watchers...")
                     phase_watcher.stop()
                     sentinel_watcher.stop()
+                    if args.web:
+                        server.shutdown()
+                        server.server_close()
                     phase_thread.join(timeout=2)
                     print_success("All watchers stopped")
             except Exception as e:

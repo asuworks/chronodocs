@@ -130,9 +130,7 @@ def test_cli_report_scans_all_files(temp_repo_for_cli: Path):
 
     # Commit one of the files
     subprocess.run(["git", "add", "readme.md"], cwd=repo_root, check=True)
-    subprocess.run(
-        ["git", "commit", "-m", "add readme"], cwd=repo_root, check=True
-    )
+    subprocess.run(["git", "commit", "-m", "add readme"], cwd=repo_root, check=True)
 
     with patch(
         "sys.argv",

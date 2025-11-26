@@ -76,12 +76,21 @@ def test_get_ctime_for_file(temp_index_dir: Path, sample_files: list[Path]):
     index = CreationIndex(index_path)
 
     start_time = time.time()
-    index.add_file(sample_files[0])
+
+    # Create a new file within the measured time window
+    new_file = temp_index_dir / "new_file.md"
+    new_file.touch()
+
+    index.add_file(new_file)
     end_time = time.time()
 
-    ctime = index.get_ctime_for_file(sample_files[0])
+    ctime = index.get_ctime_for_file(new_file)
     assert ctime is not None
-    assert start_time <= ctime <= end_time
+
+    # Allow a small epsilon for filesystem timestamp resolution differences
+    # E.g. filesystem timestamp might be truncated to fewer digits than time.time()
+    epsilon = 0.1
+    assert start_time - epsilon <= ctime <= end_time + epsilon
 
 
 def test_file_key_stability_on_rename(temp_index_dir: Path):

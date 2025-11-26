@@ -1,4 +1,6 @@
+import datetime
 import os
+import time
 from pathlib import Path
 
 import pytest
@@ -97,3 +99,39 @@ def test_rename_handling(temp_index_dir: Path):
     # The hash should be the same
     renamed_hash = index.get_hash(renamed_path)
     assert original_hash == renamed_hash
+
+
+def test_update_file_uses_mtime(temp_index_dir: Path, sample_file: Path):
+    """Test that update_file uses the file's modification time, not current time."""
+    index_path = temp_index_dir / ".update_index.json"
+    index = UpdateIndex(index_path)
+
+    # Set mtime to a specific time in the past (e.g. 1 hour ago)
+    past_time = time.time() - 3600
+    os.utime(sample_file, (past_time, past_time))
+
+    index.update_file(sample_file)
+
+    # Get the stored timestamp
+    entry = index.get_all_entries().get(str(sample_file))
+    assert entry is not None
+
+    stored_time_str = entry["last_content_update"]
+
+    # Parse ISO format (handling Z which might be used in the implementation)
+    if stored_time_str.endswith("Z"):
+        stored_time_str = stored_time_str.replace("Z", "+00:00")
+
+    stored_dt = datetime.datetime.fromisoformat(stored_time_str)
+    stored_ts = stored_dt.timestamp()
+
+    # Check that stored time is close to the file's mtime (allowing small jitter for float precision)
+    # and significantly different from current time
+    assert (
+        abs(stored_ts - past_time) < 1.0
+    ), f"Stored time {stored_ts} differs from mtime {past_time}"
+
+    current_time = time.time()
+    assert (
+        abs(stored_ts - current_time) > 100.0
+    ), "Stored time is too close to current time"

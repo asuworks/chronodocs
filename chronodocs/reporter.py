@@ -16,7 +16,7 @@ class Reporter:
 
     def __init__(self, config: Config, repo_path: Path, phase: str = None):
         self.config = config
-        self.repo_path = repo_path
+        self.repo_path = repo_path.resolve()  # Ensure absolute
         self.phase = phase
 
         # Calculate phase directory for relative link generation
@@ -26,7 +26,7 @@ class Reporter:
                 config.phase_dir_template or ".devcontext/progress/{phase}"
             )
             phase_dir_str = phase_dir_template.replace("{phase}", self.phase)
-            self.phase_dir = self.repo_path / phase_dir_str
+            self.phase_dir = (self.repo_path / phase_dir_str).resolve()
 
         # Initialize UpdateIndex in phase directory if phase is specified, otherwise repo root
         update_index_path = (
@@ -132,6 +132,63 @@ class Reporter:
             "created": datetime.datetime.fromtimestamp(created_ts),
             "updated": datetime.datetime.fromtimestamp(updated_ts),
         }
+
+    def get_structured_data(self) -> Dict[str, Any]:
+        """Return log data as JSON-serializable dict"""
+        all_files = self._collect_files()
+        git_info = GitInfoProvider(self.repo_path)
+
+        all_files_info = []
+        for filepath in all_files:
+            try:
+                info = self._get_file_info(filepath, git_info)
+                all_files_info.append(info)
+            except Exception as e:
+                print(f"Warning: Could not process {filepath}: {e}")
+                continue
+
+        # Filter for changed files only, matching generate_report behavior
+        changed_files_info = [
+            info for info in all_files_info if info["status"] != "committed"
+        ]
+
+        return {
+            "meta": {
+                "phase": self.phase,
+                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "total_files": len(changed_files_info),
+            },
+            "files": [
+                {
+                    "filename": info["path"].name,
+                    "path": str(info["relative_path"]),
+                    "status": info["status"],
+                    "created": info["created"].isoformat(),
+                    "updated": info["updated"].isoformat(),
+                    "folder": str(info["path"].parent.relative_to(self.repo_path)),
+                }
+                for info in changed_files_info
+            ],
+        }
+
+    def get_file_diff(self, relative_path: str) -> str:
+        """
+        Retrieves the git diff for a specific file relative to the repo root.
+        Includes security check to prevent directory traversal.
+        """
+        try:
+            # Security: Ensure path doesn't escape repo root
+            full_path = (self.repo_path / relative_path).resolve()
+            if not full_path.is_relative_to(self.repo_path):
+                return f"Error: Invalid path {relative_path}"
+
+            if not full_path.exists():
+                return f"Error: File not found {relative_path}"
+
+            git_info = GitInfoProvider(self.repo_path)
+            return git_info.get_diff_for_file(full_path)
+        except Exception as e:
+            return f"Error generating diff: {str(e)}"
 
     def generate_report(self) -> str:
         """Generates the full Markdown report."""

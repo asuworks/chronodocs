@@ -87,6 +87,20 @@ class UpdateIndex:
         if new_hash is None:
             return
 
+        # Get the actual filesystem mtime to store
+        try:
+            mtime = os.path.getmtime(filepath)
+            last_update_str = (
+                datetime.datetime.fromtimestamp(mtime, tz=timezone.utc)
+                .isoformat()
+                .replace("+00:00", "Z")
+            )
+        except OSError:
+            # Fallback to current time if we can't get mtime
+            last_update_str = (
+                datetime.datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            )
+
         entry = self._entries.get(path_key)
         if old_path and str(old_path) in self._entries:
             # Handle rename
@@ -96,17 +110,13 @@ class UpdateIndex:
         if entry is None:
             entry = {
                 "hash": new_hash,
-                "last_content_update": datetime.datetime.now(timezone.utc)
-                .isoformat()
-                .replace("+00:00", "Z"),
+                "last_content_update": last_update_str,
                 "path_history": [path_key],
             }
             self._entries[path_key] = entry
         elif entry["hash"] != new_hash:
             entry["hash"] = new_hash
-            entry["last_content_update"] = (
-                datetime.datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-            )
+            entry["last_content_update"] = last_update_str
             if path_key not in entry["path_history"]:
                 entry["path_history"].append(path_key)
 
